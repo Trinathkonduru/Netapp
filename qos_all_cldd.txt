@@ -1,0 +1,416 @@
+ah-cis-cldd-x01
+policy-group                     throughput-policy
+-------------------------------- -----------------
+cb0795_infrapriv1_ahmedabad_snap 0-6000IOPS
+
+eg-cis-cldd-e01
+policy-group                throughput-policy
+--------------------------- -----------------
+cb0179_fermimtlionpe_nosnap 0-6000IOPS
+cb0179_trl_codeshiste_snap  0-6000IOPS
+2 entries were displayed.
+
+eg-cis-cldd-f01
+policy-group             throughput-policy
+------------------------ -----------------
+TSA_cps_sqlbackups_3year 0-6000IOPS
+cnd_TSA_cps_sqlbackups_3year_nosnapr 0-6000IOPS
+dcr_cis_cnd_t1_sqlbackups_nosnap 0-6000IOPS
+eg_dcr_cnd_t1_sqlbackups_nosnap 0-6000IOPS
+4 entries were displayed.
+
+eg-cps-cldd-e01
+policy-group                       throughput-policy
+---------------------------------- -----------------
+cb0184_plt_tremor956p_s01ora1_snap 0-6000IOPS
+cb0184_plt_tremor956p_s01ora2_snap 0-6000IOPS
+cb0184_plt_tremor956q_n01ora1_nosnap 0-INF
+cb0184_plt_tremor956q_s01ora1_snap 0-INF
+cb0184_plt_tremor956q_s01ora2_snap 0-INF
+cb0184_plt_tremor956q_s01oraadm1_snap 0-INF
+6 entries were displayed.
+
+eg-cps-cldd-e02
+policy-group                        throughput-policy
+----------------------------------- -----------------
+cb0146_at_cobalt724p_n01ora1_nosnap 0-INF
+cb0146_at_cobalt724p_s01ora1_snap   0-6000IOPS
+cb0146_at_cobalt724p_s01oraadm1_snap 0-INF
+cb0184_at_billing524p_n01ora1_nosnap 0-INF
+cb0184_at_billing524p_s01ora1_snap  0-6000IOPS
+cb0184_at_billing524p_s01oraadm1_snap 0-6000IOPS
+cb0184_at_cobalt18rd_n01ora1_nosnap 0-INF
+cb0184_at_cobalt18rd_s01ora1_snap   0-INF
+cb0184_at_cobalt27p_n01ora1_nosnap  0-INF
+cb0184_at_cobalt27p_s01ora1_snap    0-INF
+cb0184_at_cobalt27p_s01oraadm1_snap 0-INF
+cb0184_at_cobalt_utility1p_n01ora1_nosnap 0-INF
+cb0184_at_cobalt_utility1p_s01ora1_snap 0-INF
+cb0184_at_cobalt_utility1p_s01oraadm1_snap 0-INF
+cb0184_at_uds522p_n01ora1_nosnap    0-INF
+cb0184_at_uds522p_s01ora1_snap      0-INF
+cb0184_at_uds522p_s01oraadm1_snap   0-INF
+cb0184_ct_autonomous_cobaltharvesterprodb_nosnap 0-INF
+cb0184_trl_lcmltiogather42p_n01ora1_nosnap 0-6000IOPS
+cb0184_trl_lcmltiogather42p_s01ora1_snap 0-6000IOPS
+cb0184_trl_lcmltiogather42p_s01oraadm1_snap 0-6000IOPS
+cb0197_wi_onepasspe1_info_snap      0-INF
+cb0197_wi_onepasspe1_tsys_nosnap    0-INF
+cb0197_wi_onepasspe1_usr_snap       0-INF
+cb0197_wi_onepasspe2_usr_snap       0-INF
+cb0197_wi_onepassstagepf1_info_snap 0-INF
+cb0197_wi_onepassstagepf1_tsys_nosnap 0-INF
+cb0197_wi_onepassstagepf1_usr_snap  0-INF
+cb0332_at_wln409p_n01ora1_nosnap    0-INF
+cb0332_at_wln409p_n01ora1_nosnap_1  0-INF
+cb0332_at_wln409p_s01ora1_snap      0-INF
+cb0332_at_wln409p_s01oraadm1_snap   0-INF
+cb0350_nv_prismdelivery9p_n01ora1_nosnap 0-INF
+cb0350_nv_prismdelivery9p_s01ora1_snap 0-INF
+34 entries were displayed.
+
+eg-cps-cldd-e03
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+eg-cps-cldd-e04
+policy-group                throughput-policy
+--------------------------- -----------------
+CB0078_scholarone_2001_snap 0-6000IOPS
+CB0078_scholarone_2002_snap 0-6000IOPS
+CB0078_scholarone_2003_snap 0-6000IOPS
+CB0078_scholarone_2004_snap 0-6000IOPS
+CB0078_scholarone_2005_snap 0-6000IOPS
+CB0078_scholarone_2006_snap 0-6000IOPS
+CB0078_scholarone_2007_snap 0-6000IOPS
+CB0078_scholarone_2008_snap 0-6000IOPS
+CB0078_scholarone_2009_snap 0-6000IOPS
+CB0078_scholarone_2010_snap 0-6000IOPS
+CB0078_scholarone_2011_snap 0-6000IOPS
+CB0078_scholarone_2012_snap 0-6000IOPS
+CB0078_scholarone_2013_snap 0-6000IOPS
+CB0078_scholarone_2014_snap 0-6000IOPS
+CB0078_scholarone_2015_snap 0-6000IOPS
+CB0078_scholarone_2016_snap 0-6000IOPS
+CB0078_scholarone_s1links_snap 0-6000IOPS
+17 entries were displayed.
+
+eg-cps-cldd-e05
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+eg-cps-cldd-f01
+policy-group                                 throughput-policy
+-------------------------------------------- -----------------
+cb0184_plt_tremor956p_n01ora1_nosnap-vserver 0-6000IOPS
+cb0184_plt_tremor956p_s01ora1_snap           0-6000IOPS
+cb0184_plt_tremor956p_s01ora2_snap           0-6000IOPS
+cb0184_plt_tremor956p_s01oraadm1_snap        0-6000IOPS
+cb0184_plt_tremor956q_n01ora1_nosnap         0-6000IOPS
+cb0184_plt_tremor956q_s01ora1_snap           0-6000IOPS
+cb0184_plt_tremor956q_s01oraadm1_snap        0-6000IOPS
+7 entries were displayed.
+
+eg-cps-cldd-f02
+policy-group                        throughput-policy
+----------------------------------- -----------------
+cb0146_at_cobalt265p_n01ora1_nosnap 0-6000IOPS
+cb0146_at_cobalt265p_s01ora1_snap   0-6000IOPS
+cb0146_at_cobalt265p_s01oraadm1_snap 0-6000IOPS
+cb0146_at_cobalt724p_n01ora1_nosnap 0-INF
+cb0146_at_cobalt724p_s01ora1_snap   0-6000IOPS
+cb0146_at_cobalt724p_s01oraadm1_snap 0-INF
+cb0146_at_cobalt8p_n01ora1_nosnap   0-6000IOPS
+cb0146_at_cobalt8p_s01ora1_snap     0-6000IOPS
+cb0184_at_billing524p_n01ora1_nosnap 0-INF
+cb0184_at_billing524p_s01ora1_snap  0-INF
+cb0184_at_billing524p_s01oraadm1_snap 0-INF
+cb0184_at_cobalt13p_n01ora1_nosnap  0-INF
+cb0184_at_cobalt18rd_n01ora1_nosnap 0-INF
+cb0184_at_cobalt18rd_s01ora1_snap   0-INF
+cb0184_at_cobalt28p_n01ora1_nosnap  0-INF
+cb0184_at_cobalt28p_s01ora1_snap    0-INF
+cb0184_at_cobalt28p_s01oraadm1_snap 0-INF
+cb0184_at_cobalt9p_n01ora1_nosnap   0-INF
+cb0184_at_cobalt_utility2p_n01ora1_nosnap 0-INF
+cb0184_at_cobalt_utility2p_s01ora1_snap 0-INF
+cb0184_at_cobalt_utility2p_s01oraadm1_snap 0-INF
+cb0184_at_uds522p_n01ora1_nosnap    0-INF
+cb0184_at_uds522p_s01ora1_snap      0-INF
+cb0184_at_uds522p_s01oraadm1_snap   0-INF
+cb0184_ct_autonomous_cobaltharvesterproda_nosnap 0-INF
+cb0184_goldengate_test3_cr0741389_snap 0-INF
+cb0184_trl_lcmltiogather42p_n01ora1_nosnap 0-6000IOPS
+cb0184_trl_lcmltiogather42p_s01ora1_snap 0-6000IOPS
+cb0184_trl_lcmltiogather42p_s01oraadm1_snap 0-6000IOPS
+cb0197_wi_onepasspf1_info_snap      0-INF
+cb0197_wi_onepasspf1_tsys_nosnap    0-INF
+cb0197_wi_onepasspf1_usr_snap       0-INF
+cb0197_wi_onepasspf2_usr_snap       0-INF
+cb0197_wi_onepassstagepf1_info_snap 0-INF
+cb0197_wi_onepassstagepf1_tsys_nosnap 0-INF
+cb0197_wi_onepassstagepf1_usr_snap  0-INF
+cb0332_at_wln409p_n01ora1_nosnap    0-INF
+cb0332_at_wln409p_s01ora1_snap      0-INF
+cb0332_at_wln409p_s01oraadm1_snap   0-INF
+cb0350_nv_prismdelivery9p_n01ora1_nosnap 0-INF
+cb0350_nv_prismdelivery9p_s01ora1_snap 0-INF
+41 entries were displayed.
+
+eg-cps-cldd-f05
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+eg-cps-cldd-h01
+policy-group                            throughput-policy
+--------------------------------------- -----------------
+cb0146_nv_monitoringdb6p_n01ora1_nosnap 0-INF
+cb0146_nv_monitoringdb6p_n01ora2_nosnap 0-INF
+cb0146_nv_monitoringdb6p_s01ora1_snap   0-INF
+cb0146_nv_monitoringdb6p_s01ora2_snap   0-INF
+cb0146_nv_monitoringdb6p_s01oraadm1_snap 0-INF
+cb0146_nv_monitoringdb7p_n02ora1_nosnap 0-INF
+cb0146_nv_monitoringdb7p_s02ora1_snap   0-INF
+cb0146_nv_monitoringdb7p_s02oraadm1_snap 0-INF
+8 entries were displayed.
+
+ln-cps-cldd-d03
+policy-group         throughput-policy
+-------------------- -----------------
+CB0078_drawings_snap 0-INF
+
+pl-cis-cldd-p01
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+pl-cis-cldd-p03
+policy-group                      throughput-policy
+--------------------------------- -----------------
+cb0574_fnr_wealthadvftpqapln_snap 0-6000IOPS
+cb0574_fnr_wealthadvpdfdevpln_snap 0-6000IOPS
+cb0574_fnr_wealthenvisiondevpln_snap 0-6000IOPS
+cb0574_fnr_wealthenvisionqapln_snap 0-6000IOPS
+cb0574_fnr_wealthndmqapln_snap    0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_info_snap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_tsys_nosnap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_usr_snap 0-6000IOPS
+cb0574_fr_webqarwmq_14_n01oraarch1_nosnap 0-6000IOPS
+cb0574_fr_webqarwmq_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_webqarwmq_s01ora1_snap  0-6000IOPS
+cb0574_fr_webqarwmq_s01oraadm1_snap 0-6000IOPS
+cb0574_wi_wmenvision1_info_snap   0-6000IOPS
+cb0574_wi_wmenvision1_tsys_nosnap 0-6000IOPS
+cb0574_wi_wmenvision1_usr_snap    0-6000IOPS
+cb0781_infra_virtual_idp0001_vol01_snap07 0-INF
+cb0781_infra_virtual_idp0001_vol02_snap07 0-INF
+cb0781_infra_virtual_idp0001_vol03_snap07 0-INF
+cb0781_infra_virtual_idp0001_vol04_snap07 0-INF
+cb0781_infra_virtual_idp0002_vol01_snap07 0-INF
+cb0781_infra_virtual_idp0002_vol02_snap07 0-INF
+cb0781_infra_virtual_idp0002_vol03_snap07 0-INF
+cb0781_infra_virtual_idp0005_vol01_snap07 0-INF
+cb0781_infra_virtual_idp0005_vol02_snap07 0-INF
+24 entries were displayed.
+
+pl-cis-cldd-p04
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+pl-cps-cldd-p01
+policy-group                       throughput-policy
+---------------------------------- -----------------
+cb0574_fnr_wealthadvftpprdpln_snap 0-6000IOPS
+cb0574_fnr_wealthadvftpstgpln_snap 0-6000IOPS
+cb0574_fnr_wealthadvpdfprdpln_snap 0-6000IOPS
+cb0574_fnr_wealthenvisionstgpln_snap 0-6000IOPS
+cb0574_fnr_wealthndmprdpln_snap    0-6000IOPS
+cb0574_fnr_wealthndmstgpln_snap    0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_7_sqlarch1_nosnap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_info_snap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_tsys_nosnap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor1_usr_snap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor2_info_snap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor2_log_nosnap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor2_tsys_nosnap 0-6000IOPS
+cb0574_fnr_wi_wm_advisor2_usr_snap 0-6000IOPS
+cb0574_fr_ctmprdrwmp_14_n01oraarch1_nosnap 0-6000IOPS
+cb0574_fr_ctmprdrwmp_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_ctmprdrwmp_n02ora1_nosnap 0-6000IOPS
+cb0574_fr_ctmprdrwmp_s01ora1_snap  0-6000IOPS
+cb0574_fr_ctmprdrwmp_s01oraadm1_snap 0-6000IOPS
+cb0574_fr_ctmprdrwmp_s02ora1_snap  0-6000IOPS
+cb0574_fr_ctmprdrwmp_s02oraadm1_snap 0-6000IOPS
+cb0574_fr_ctmuatrwms_14_n01oraarch1_nosnap 0-INF
+cb0574_fr_ctmuatrwms_14_n02oraarch1_nosnap 0-INF
+cb0574_fr_ctmuatrwms_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_ctmuatrwms_n02ora1_nosnap 0-6000IOPS
+cb0574_fr_ctmuatrwms_n04ora1_nosnap 0-6000IOPS
+cb0574_fr_ctmuatrwms_n06ora1_nosnap 0-6000IOPS
+cb0574_fr_ctmuatrwms_s01ora1_snap  0-6000IOPS
+cb0574_fr_ctmuatrwms_s01oraadm1_snap 0-6000IOPS
+cb0574_fr_ctmuatrwms_s02ora1_snap  0-6000IOPS
+cb0574_fr_ctmuatrwms_s02oraadm1_snap 0-6000IOPS
+cb0574_fr_webprodrwmp_7_n01oraarch1_nosnap 0-6000IOPS
+cb0574_fr_webprodrwmp_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_webprodrwmp_s01ora1_snap 0-6000IOPS
+cb0574_fr_webprodrwmp_s01oraadm1_snap 0-6000IOPS
+cb0781_infra_virtual_pdp0003_vol01_snap07 0-INF
+cb0781_infra_virtual_pdp0003_vol02_snap07 0-INF
+cb0781_infra_virtual_pdp0004_vol01_snap07 0-INF
+cb0781_infra_virtual_pdp0004_vol02_snap07 0-INF
+infra_oraarchalt_cps_pl_nosnap     0-6000IOPS
+40 entries were displayed.
+
+pl-cps-cldd-p02
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+pl-cps-cldd-p04
+policy-group                throughput-policy
+--------------------------- -----------------
+CB0078_scholarone_2001_snap 0-6000IOPS
+CB0078_scholarone_2002_snap 0-6000IOPS
+CB0078_scholarone_2003_snap 0-6000IOPS
+CB0078_scholarone_2004_snap 0-6000IOPS
+CB0078_scholarone_2005_snap 0-6000IOPS
+CB0078_scholarone_2006_snap 0-6000IOPS
+CB0078_scholarone_2007_snap 0-6000IOPS
+CB0078_scholarone_2008_snap 0-6000IOPS
+CB0078_scholarone_2009_snap 0-6000IOPS
+CB0078_scholarone_2010_snap 0-6000IOPS
+CB0078_scholarone_2011_snap 0-6000IOPS
+CB0078_scholarone_2012_snap 0-6000IOPS
+CB0078_scholarone_2013_snap 0-6000IOPS
+CB0078_scholarone_2014_snap 0-6000IOPS
+CB0078_scholarone_2015_snap 0-6000IOPS
+CB0078_scholarone_2016_snap 0-6000IOPS
+CB0078_scholarone_s1links_snap 0-6000IOPS
+17 entries were displayed.
+
+pm-cis-cldd-x01
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+sv-cps-cldd-v01
+policy-group                              throughput-policy
+----------------------------------------- -----------------
+cb0029_findlaw_findlaw831p_n01ora1_nosnap 0-6000IOPS
+cb0029_findlaw_findlaw831p_s01ora1_snap   0-6000IOPS
+cb0029_findlaw_findlaw831p_s01oraadmin1_snap 0-6000IOPS
+cb0029_findlaw_findlaw904p_n01ora1_nosnap 0-6000IOPS
+cb0029_findlaw_findlaw904p_s01ora1_snap   0-6000IOPS
+cb0029_findlaw_findlaw904p_s01oraadm1_snap 0-6000IOPS
+cb0029_findlaw_sl1p_n01mysql1_nosnap      0-6000IOPS
+cb0029_findlaw_sl1p_s01mysql1_snap        0-6000IOPS
+cb0029_findlaw_sl2p_n01mysql1_nosnap      0-6000IOPS
+cb0029_findlaw_sl2p_s01mysql1_snap        0-6000IOPS
+cb0029_findlawdatacq_snap                 0-6000IOPS
+cb0029_findlawdatapc_snap                 0-6000IOPS
+cb0029_findlawdeploymentpc_snap           0-6000IOPS
+cb0029_findlawhammerpc_snap               0-6000IOPS
+cb0029_findlawprofilespc_snap             0-6000IOPS
+cb0029_findlawpviewpc_snap                0-6000IOPS
+cb0029_findlawsearchpc_snap               0-6000IOPS
+cb0029_findlawsl1p_7_n01mysqlarch2_nosnap 0-6000IOPS
+cb0029_findlawsplunkpc_snap               0-6000IOPS
+cb0029_findlawtaxonomypc_snap             0-6000IOPS
+cb0029_findlawxstorepc_snap               0-6000IOPS
+cb0029_flsuperlawdbpc_nosnap              0-6000IOPS
+cb0029_infra_findlawjumpserverpc_snap     0-6000IOPS
+cb0029_infralinuxbuildpc_nosnap           0-6000IOPS
+cb0780_infra_virtual_pev0001_vol01_snap07 0-6000IOPS
+cb0780_infra_virtual_pev0001_vol02_snap07 0-6000IOPS
+cb0780_infra_virtual_pev0001_vol03_snap07 0-6000IOPS
+cb0780_infra_virtual_pev0001_vol04_snap07 0-6000IOPS
+ded-ecom-v0001                            0-6000IOPS
+ded-ecom-v0002                            0-6000IOPS
+30 entries were displayed.
+
+wi-cis-cldd-r01::> qos policy-group show -fields throughput-policy
+policy-group                            throughput-policy
+--------------------------------------- -----------------
+cb0574_wi_wealthenvisionqasql_info_snap 0-6000IOPS
+cb0574_wi_wealthenvisionqasql_nosnap    0-6000IOPS
+cb0574_wi_wealthenvisionqasql_snap      0-6000IOPS
+cb0574_wi_wealthenvisionsql2dev_nosnap  0-6000IOPS
+cb0574_wi_wealthenvisionsql2dev_snap    0-6000IOPS
+cb0574_wi_wealthenvisionsqldev_nosnap   0-6000IOPS
+cb0574_wi_wealthenvisionsqldev_snap     0-6000IOPS
+cb0574_wip_wealthenvisiondatadev_snap   0-6000IOPS
+cb0574_wip_wealthenvisionqadata_snap    0-6000IOPS
+prod-corp-w0001                         0-6000IOPS
+prod-corp-w0002                         0-6000IOPS
+11 entries were displayed.
+
+wi-cis-cldd-r02::> qos policy-group show -fields throughput-policy
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+wi-cis-cldd-t01::> qos policy-group show -fields throughput-policy
+policy-group                         throughput-policy
+------------------------------------ -----------------
+cb0574_fr_pmpcdevrwmd_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_pmpcdevrwmd_s01ora1_snap   0-6000IOPS
+cb0574_fr_pmpcdevrwmd_s01oraadm1_snap 0-6000IOPS
+cb0574_fr_pmpcqarwmd_n01ora1_nosnap  0-6000IOPS
+cb0574_fr_pmpcqarwmd_s01ora1_snap    0-6000IOPS
+cb0574_fr_pmpcqarwmd_s01oraadm1_snap 0-6000IOPS
+cb0574_fr_pmpcuatrwmd_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_pmpcuatrwmd_s01ora1_snap   0-6000IOPS
+cb0574_fr_pmpcuatrwmd_s01oraadm1_snap 0-6000IOPS
+cb0574_frpmpcdevrwmd_7_n01oraarch1_nosnap 0-6000IOPS
+cb0574_frpmpcuatrwmd_7_n01oraarch1_nosnap 0-6000IOPS
+cb0574_wi_tfssql2_nosnap             0-6000IOPS
+cb0574_wi_tfssql2_snap               0-6000IOPS
+cb0574_wi_tfssql_nosnap              0-6000IOPS
+cb0574_wi_tfssql_snap                0-6000IOPS
+cb0574_wi_wealthadvisorsql_nosnap    0-6000IOPS
+cb0574_wi_wealthadvisorsql_snap      0-6000IOPS
+cb0574_wi_wealthadvisorstgsql_nosnap 0-6000IOPS
+cb0574_wi_wealthadvisorstgsql_snap   0-6000IOPS
+cb0574_wip_wealthadvisordatadev_snap 0-6000IOPS
+cb0574_wip_wealthadvisorstgdata_snap 0-6000IOPS
+infra_oraarchalt_cis_ocd_nosnap      0-6000IOPS
+prod-corp-w0010                      0-6000IOPS
+prod-corp-w0011                      0-6000IOPS
+24 entries were displayed.
+
+wi-cis-cldd-t02::> qos policy-group show -fields throughput-policy
+There are no entries matching your query.
+(table is empty, no policies exist)
+
+wi-cps-cldd-r01::> qos policy-group show -fields throughput-policy
+policy-group                        throughput-policy
+----------------------------------- -----------------
+cb0574_fr_pmpcdrrwmd_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_pmpcdrrwmd_s01oraadm1_snap 0-6000IOPS
+cb0574_fr_pmpcdrwmd_s01ora1_snap    0-6000IOPS
+cb0574_frpmpcdrrwmd_7_n01oraarch1_nosnap 0-6000IOPS
+cb0574_wi_wealthadvisordrsql_nosnap 0-6000IOPS
+cb0574_wi_wealthadvisordrsql_snap   0-6000IOPS
+cb0574_wip_wealthadvisordrsql_log_nosnap 0-6000IOPS
+cb0574_wip_wealthadvisordrsql_nosnap 0-6000IOPS
+cb0574_wip_wealthadvisordrsql_snap  0-6000IOPS
+infra_oraarchalt_cps_ocb_nosnap     0-6000IOPS
+prod-ecom-w0001                     0-6000IOPS
+prod-ecom-w0002                     0-6000IOPS
+12 entries were displayed.
+
+wi-cps-cldd-t01::> qos policy-group show -fields throughput-policy
+policy-group                         throughput-policy
+------------------------------------ -----------------
+cb0574_fr_pmpcprdrwmd_n01ora1_nosnap 0-6000IOPS
+cb0574_fr_pmpcprdrwmd_s01oraadm1_snap 0-6000IOPS
+cb0574_fr_pmpcprdwmd_s01ora1_snap    0-6000IOPS
+cb0574_frpmpcprdrwmd_7_n01oraarch1_nosnap 0-6000IOPS
+cb0574_wi_wealthadvisorprodsql_nosnap 0-6000IOPS
+cb0574_wi_wealthadvisorprodsql_snap  0-6000IOPS
+cb0574_wip_wealthadvisorprodsql_log_nosnap 0-6000IOPS
+cb0574_wip_wealthadvisorprodsql_nosnap 0-6000IOPS
+cb0574_wip_wealthadvisorprodsql_snap 0-6000IOPS
+infra_oraarchalt_cps_ocd_nosnap      0-6000IOPS
+prod-ecom-w0010                      0-6000IOPS
+prod-ecom-w0011                      0-6000IOPS
+vol4                                 0-6000IOPS
+13 entries were displayed.
+

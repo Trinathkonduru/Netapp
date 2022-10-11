@@ -1,0 +1,15 @@
+priv set diag
+ 
+options snapmirror.enable off
+options snapvault.enable off
+ 
+snapmirror status /vol/cis_cs_bkp_e04_root/1 
+snapvault status /vol/cis_cs_bkp_e04_root/1
+snapmirror convert /vol/cis_cs_bkp_e04_root/1
+snapmirror status /vol/cis_cs_bkp_e04_root/1
+ 
+options snapmirror.enable on
+options snapvault.enable on
+ 
+snapmirror quiesce /vol/cis_cs_bkp_e04_root/1
+snapmirror break /vol/cis_cs_bkp_e04_root/1

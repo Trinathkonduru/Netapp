@@ -1,0 +1,1155 @@
+nerstrand:/filers/admin/scripts/support # cat datamotion_assistance.sh
+#!/bin/bash
+
+#       Version         Author                  Date
+#       v1-                     Joel Edstrom    02/13/2014
+#         - DataMotion pre-check script that verifies managing DFMs, ONTAP versions, DNS resolution, ipspace compatability, aggr compatability, volume sizes
+#       v2-                     Joel Edstrom    03/19/2014
+#         - Fixed an issue with ONTAP version checking
+#         - Added a bypass where you can specify a DFM after the script name which will bypass DFM checking (useful for leverage moves, or if using a temp DFM for troubleshooting)
+#       v2.1-                   Joel Edstrom    07/23/2014
+#         - Fixed an issue with vfiler/pfiler gathering.  Source file format changed slightly and these functions never got updated.
+#       v.3-            Joel Edstrom    01/20/2014
+#         - General fixes and code cleanup.
+#         - Added better source pfiler detection and unique identification
+#         - Added bypass DFM functionality on a per-vfiler basis
+#
+#
+#       BUG-FIXES-NEEDED
+#       -
+#
+#
+#       TO-DO LIST
+#       - Add a check for sufficient space in the target filer/aggregate (both used and overcommit)
+#       - Add a check for filer model
+#       - Add a check for DFPM dataset provisioning policy
+#       - Add check for all volumes being thin
+#       - Add a check asking if migration will be an online or offline cutover
+#       - Add a check for iscsi/lun moves as, per Joe Bruns/Windows, they can only be reliably performed offline
+#       - Add commands to grow volumes/snap reserves
+#       -
+#
+
+
+function script_prep_work()
+{
+        scriptrunpath=/filers/admin/scripts/support
+        scriptconfpath=/filers/admin/scripts/conf/logical/datamotion_vfiler_precheck
+
+        input_file=$scriptconfpath/vfiler_input_list
+
+        scripttemppath=$scriptconfpath/tmp
+
+        master_vol_list=/filers/admin/scripts/conf/logical/daily_info_collection/dfm_information/current/all_dfm_volume_list.out
+        master_vfiler_list=/filers/admin/scripts/conf/logical/daily_info_collection/dfm_information/current/all_dfm_vfiler_list.out
+        master_controller_list=/filers/admin/scripts/conf/logical/daily_info_collection/dfm_information/current/all_dfm_controller_list.out
+        master_volume_aggregate_list=/filers/admin/scripts/conf/logical/daily_info_collection/dfm_information/current/all_dfm_volume_aggregate_vfiler.out
+        master_aggregate_controller_list=/filers/admin/scripts/conf/logical/daily_info_collection/dfm_information/current/all_dfm_aggregate_controllers.out
+
+        indepth_volume_details_list=/filers/admin/scripts/conf/logical/daily_info_collection/volume_data_consolidation/current/indepth_volume_details
+
+        rm -rf $scripttemppath/*
+
+        problem_count=0
+
+        clear
+        echo "============================================="
+        echo "Welcome to the pre-checklist for NetApp Vfiler Datamotion tool."
+        echo "Please note this script is only intended to work in the xProfessional environment for various connectivity reasons."
+        echo;
+        echo "!!!!This script needs to be run as your own user (with shared SSH keys on each filer) and from the proper DFM!!!!"
+        echo
+        echo "If you see any bugs, errors, or anything that doesn't seem right please contact Joel Edstrom or Storage Services Engineering for assistance."
+        echo
+        echo "Known issues/missing features:"
+        echo "  * Won't check if target controller/aggregate has sufficient commit or usable space."
+        echo "  * Doesn't check if filer models are compatible for DataMotion (supposedly some 3XXX series weren't compatible in the past...)"
+        echo "  * Doesn't check DFM Dataset Provisioning policy"
+        echo
+        echo "Any problems with a migration will be listed at the very end of this script output."
+        sleep 10
+}
+
+
+function menu()
+{
+        clear
+        echo "#################################################################"
+        echo "#                                                               #"
+        echo "#   Welcome to the NetApp 7mode DataMotion Tool!                #"
+        echo "#                                                               #"
+        echo "#     It's worth noting this script is still in testing.        #"
+        echo "#     It appears to be working well but contact Joel Edstrom    #"
+        echo "#     with any bugs/issues/typos/etc.                           #"
+        echo "#                                                               #"
+        echo "#                                                               #"
+        echo "#   Functions this tool can facilitate:                         #"
+        echo "#   1) - vFiler DataMotion pre-checks                           #"
+        echo "#                                                               #"
+        echo "#   2) - DFPM DataMotion CLI Command Generator                  #"
+        echo "#                                                               #"
+        echo "#                                                               #"
+        echo "#   0) - Exit script                                            #"
+        echo "#                                                               #"
+        echo "#################################################################"
+        echo
+        echo "Please enter a choice from the menu above:"
+        printf "        Answer: "
+        read menu_choice
+        echo
+
+        case $menu_choice in
+
+        1)      echo "You picked option $menu_choice - vFiler DataMotion pre-checks."
+                sleep 3
+                echo
+                # /filers/admin/scripts/delivery/logical/dfm_new_build_options.sh $dfm_os $build_qa_answer;;
+                script_prep_work
+                determineinput
+                gather_source_pfiler
+                check_managing_dfm
+                ontap_version_check
+                pfiler_dns_check
+                ipspace_check
+                volume_aggregate_checking
+                gather_volume_information
+                problems_found_summary;;
+
+        2)      echo "You picked option $menu_choice - DFPM DataMotion CLI Command Generator."
+                sleep 3
+                echo
+                # /filers/admin/scripts/delivery/logical/dfm_new_build_group_creation.sh $dfm_os $build_qa_answer $tr_environment;;
+                script_prep_work
+                determineinput
+                gather_source_pfiler
+                dfpm_migrate_start_cli_generator;;
+
+        0)      echo
+                echo "Existing script, goodbye."
+                exit 0;;
+        "")     menu;;
+        *)      echo "Oops!! Please select menu choice 1, 2, or enter 0 to exit this script.";menu;;
+
+        esac
+}
+
+
+function determineinput()
+{
+        echo "Would you like to manually enter vfilers to perform migration pre-checks on?"
+        echo "  Type 'y' or 'yes' to manually enter vfiler names, otherwise this script will read from the following file instead:"
+        echo "  $input_file"
+        echo
+        printf "        answer: "
+        read manualentry
+        echo
+                if [[ "$manualentry" = "y" || $"$manualentry" = "yes" ]]
+                then
+                        gather_source_info_from_user
+                else
+                        gather_source_info_from_file
+                fi
+}
+
+
+function gather_source_info_from_user()
+{
+        echo "Enter how many vfilers you want to prepare tech refresh migration notes for during this session:"
+        read numbervfilers
+                if [[ $numbervfilers =~ ^[0-9]+$ ]]
+                then
+                        a=1
+                        echo
+                                while [ $a -le $numbervfilers ]
+                                do
+                                        echo "Enter the name of vfiler no $a:"
+                                        read vfiler
+                                        echo
+                                        echo "Enter the name of the desired destination filer $a:"
+                                        read dest_pfiler
+                                        vfiler_array=("${vfiler_array[@]}" "$vfiler $dest_pfiler")
+                                        a=$((a+1))
+                                        echo
+                                done
+                else
+                        echo "Only positive integers are allowed input for number of vfilers.  Exiting script."
+                        exit 1
+                fi
+        # echo
+        unset a
+        echo "Vfiler gathering completed."
+        echo
+        echo "============================================="
+        echo
+}
+
+
+function gather_source_info_from_file()
+{
+        echo "Loading vfilers names from from $input_file"
+        echo
+        oldifs=$IFS
+        IFS=$'\n'
+                while IFS=" " read vfiler dest_pfiler
+                do
+                        echo "  Vfiler $vfiler being moved to destination filer $dest_pfiler loaded."
+                        vfiler_array=("${vfiler_array[@]}" "$vfiler $dest_pfiler")
+
+                done < $input_file
+
+        IFS=$oldifs
+        echo
+        echo "Vfiler gathering completed."
+        echo
+        echo "============================================="
+        echo
+}
+
+
+##!! add in functionality to check if source and target controllers are partners of each other
+function gather_source_pfiler()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin gathering associated physical filers for entered vfilers."
+        echo
+                for index in "${vfiler_array[@]}"
+                do
+                        while IFS=" " read vfiler dest_pfiler
+                        do
+                                echo "Beginning finding source physical filer for vfiler $vfiler"
+                                vfiler_list_results=`grep "$vfiler " $master_vfiler_list`
+                                pfiler_unique_check=`echo "$vfiler_list_results" | awk '{print $4}' | sort -u | wc -l`
+
+                                        if [ "$pfiler_unique_check" -ge 2 ]
+                                        then
+                                                echo "  Multiple physical filers are listed as containing a vfiler named $vfiler.  Unable to determine physical filer, please verify manually by hand.  No further checks will be done on this vfiler."
+                                                vfiler_problem="multiple_pfilers_found"
+                                                filer_discovery_problem_array=("${filer_discovery_problem_array[@]}" "$vfiler $dest_pfiler $vfiler_problem" )
+
+                                        elif [ "$pfiler_unique_check" = "1" ]
+                                        then
+                                                source_pfiler=`grep $vfiler $master_vfiler_list | awk '{print $4}' | sort -u | sed -e 's/\./ /g' | awk '{print $1}'`
+                                                echo "  Physical filer for vfiler $vfiler is : $source_pfiler"
+                                                pfiler_to_vfiler_array=("${pfiler_to_vfiler_array[@]}" "$vfiler $source_pfiler $dest_pfiler")
+
+                                        elif [ "$pfiler_unique_check" = "0" ]
+                                        then
+                                                echo "  No physical filers were found for vfiler $vfiler.  Unable to determine physical filer, please verify manually by hand.  No further checks will be done on this vfiler."
+                                                vfiler_problem="no_pfilers_found"
+                                                filer_discovery_problem_array=("${filer_discovery_problem_array[@]}" "$vfiler $dest_pfiler $vfiler_problem" )
+
+                                        else
+                                                echo "  Something else went wrong for vfiler $vfiler.  Please check this by hand and verify no typos were entered originally.  No further checks will be done on this vfiler."
+                                                vfiler_problem="unknown_pfiler_problem_check_by_hand"
+                                                filer_discovery_problem_array=("${filer_discovery_problem_array[@]}" "$vfiler $dest_pfiler $vfiler_problem" )
+                                        fi
+
+                                echo
+                        done <<< $index
+                done
+        sleep 3
+        echo "Physical filer gathering completed."
+        echo
+        echo "============================================="
+        echo
+
+        IFS=$oldifs
+}
+
+
+##verifies source/target controllers are managed by same DFM (necessary for DataMotion)
+function check_managing_dfm()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin checking if source and target filers are managed by the same DFM or not."
+        echo
+        b=0
+
+                for index in "${pfiler_to_vfiler_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler
+                        do
+                                echo "Working on vfiler $vfiler | source filer $source_pfiler | destination filer $dest_pfiler."
+
+                                source_pfiler_source_dfm_check=`grep $source_pfiler $master_controller_list | awk '{print $1}'`
+                                dest_pfiler_source_dfm_check=`grep $dest_pfiler $master_controller_list | awk '{print $1}'`
+
+                                        if [ "$source_pfiler_source_dfm_check" = "$dest_pfiler_source_dfm_check" ]
+                                        then
+                                                echo "  Source and destination filers are managed by the same DFM, run the migration from DFM $dest_pfiler_source_dfm_check."
+                                                pfiler_to_vfiler_same_dfm_array=("${pfiler_to_vfiler_same_dfm_array[@]}" "$vfiler $source_pfiler $dest_pfiler")
+
+                                        elif [ "$source_pfiler_source_dfm_check" != "$dest_pfiler_source_dfm_check" ]
+                                        then
+                                                echo "  Are you using a non-standard DFM for this migration (IE - using a temporary DFM to migrate for leverage reasons, poor DFM performance, etc.)?"
+                                                printf "                Answer : "
+                                                read temp_dfm_answer </dev/tty
+                                                echo
+
+                                                        if [[ "$temp_dfm_answer" = "y" || "$temp_dfm_answer" = "yes" ]]
+                                                        then
+                                                                echo "  Please enter the temporary DFM you are using for this migration:"
+                                                                printf "                Answer: "
+                                                                read migration_dfm </dev/tty
+                                                                if [ "$migration_dfm" != "" ]
+                                                                then
+                                                                        echo "  Bypassing DFM check as $migration_dfm is being used for the migration."
+                                                                        pfiler_to_vfiler_same_dfm_array=("${pfiler_to_vfiler_same_dfm_array[@]}" "$vfiler $source_pfiler $dest_pfiler")
+                                                                fi
+                                                        else
+                                                                echo "  Source and destination filers are *not* managed by the same DFM.  A migration is not possible at this point in time.  No further checks will be done on this vfiler."
+                                                                echo "          If both filers are in the same environment (CIS vs. CPS) and are in the same datacenter please investigate DFM configuration."
+                                                                echo
+                                                                vfiler_problem="dest_and_source_pfiler_on_different_DFMs"
+                                                                managing_dfm_problem_array=("${managing_dfm_problem_array[@]}" "$vfiler $dest_pfiler $vfiler_problem" )
+                                                                b=$((b+1))
+                                                                        if [[ "$b" -eq "${#pfiler_to_vfiler_array[@]}" ]]
+                                                                        then
+                                                                                echo
+                                                                                echo "All vfilers being pre-checked for DataMotion are not candidates.  Exiting script."
+                                                                                exit 1
+                                                                        fi
+                                                        fi
+
+                                        else
+                                                echo "  Something else went wrong here, look into this manually for vfiler $vfiler and it's source/destination physical filers.  No further checks will be done on this vfiler."
+                                                vfiler_problem="something_else_went_wrong_during_DFM_check"
+                                                managing_dfm_problem_array=("${managing_dfm_problem_array[@]}" "$vfiler $dest_pfiler $vfiler_problem" )
+                                        fi
+
+                                echo
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "Finished checking if filers are on same DFM or not."
+        echo
+        echo "============================================="
+        echo
+}
+
+
+##verifies ONTAP versions of source/target controllers are datamotion compatible
+function ontap_version_check()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin checking source and destination filer ONTAP versions."
+        echo
+                for index in "${pfiler_to_vfiler_same_dfm_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler
+                        do
+                                echo "  Checking source and destination filer ONTAP versions for vfiler '$vfiler'."
+                                source_filer_ontap_version=`grep $source_pfiler $master_controller_list | awk '{print $5}' | sed -e 's/P/ /g' | awk '{print $1}' | sed -e 's/\.//g' | sort -u`
+                                destination_filer_ontap_version=`grep $dest_pfiler $master_controller_list| awk '{print $5}' | sed -e 's/P/ /g' | awk '{print $1}' | sed -e 's/\.//g' | sort -u`
+
+                                echo "          Source filer '$source_pfiler' has ONTAP version of '$source_filer_ontap_version' for migration of vfiler '$vfiler'."
+                                echo "          Destination filer '$dest_pfiler' has ONTAP version of '$destination_filer_ontap_version' for migration of vfiler '$vfiler'."
+                                echo
+
+                                        if [ "$source_filer_ontap_version" -lt "810" ]
+                                        then
+                                                echo "          Source filer ONTAP version is less than ONTAP 8.1 and CANNOT be used in Datamotion."
+
+                                                        if [ "$destination_filer_ontap_version" -lt "810" ]
+                                                        then
+                                                                echo "          Destination filer ONTAP version is also less than ONTAP 8.1 and CANNOT be used in Datamotion."
+
+                                                                vfiler_problem="source_ontap_less_than_8.1_dest_ontap_less_than_8.1"
+                                                                ontap_version_problem_array=("${ontap_version_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+
+                                                        elif [ "$destination_filer_ontap_version" -ge "810" ]
+                                                        then
+                                                                echo "          Destination filer ONTAP version also greater than or equal to ONTAP 8.1 and CAN be used in Datamotion."
+
+                                                                vfiler_problem="source_ontap_less_than_8.1_dest_ontap_greater_than_8.1"
+                                                                ontap_version_problem_array=("${ontap_version_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+                                                        fi
+
+                                        elif [ "$source_filer_ontap_version" -ge "810" ]
+                                        then
+                                                echo "          Source filer ONTAP version is greater than or equal to ONTAP 8.1 and CAN be used in Datamotion."
+
+                                                        if [ "$destination_filer_ontap_version" -ge "810" ]
+                                                        then
+                                                                echo "          Destination filer ONTAP version is also greater than or equal to ONTAP 8.1 and CAN be used in Datamotion."
+
+                                                        elif [ "$destination_filer_ontap_version" -le "810" ]
+                                                        then
+                                                                echo "          Destination filer ONTAP version is less than ONTAP 8.1 and CANNOT be used in Datamotion."
+
+                                                                vfiler_problem="source_ontap_greater_than_8.1_dest_ontap_less_than_8.1"
+                                                                ontap_version_problem_array=("${ontap_version_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+                                                        fi
+                                        fi
+                                echo
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "Finished checking filer ONTAP versions."
+        echo
+        echo "============================================="
+        echo
+}
+
+
+#this function needs more work - Joel Edstrom 12:51PM CST 11-13-2013
+## get rid of the output from the filer warnings
+function pfiler_dns_check()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin checking DNS resolution between source and destination filers."
+        echo
+                for index in "${pfiler_to_vfiler_same_dfm_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler
+                        do
+                                source_ping_dest_check=`ssh $source_pfiler "priv set advanced; ping $dest_pfiler" 2>/dev/null`
+                                dest_ping_source_check=`ssh $dest_pfiler "priv set advanced; ping $source_pfiler" 2>/dev/null`
+
+                                echo "Beginning ping checks between source filer '$source_pfiler' and destination filer '$dest_pfiler'"
+                                echo
+
+                                        if [[ "$source_ping_dest_check" == *"is alive"* ]]
+                                        then
+                                                echo "  Source filer can ping destination filer."
+                                                        if [[ "$dest_ping_source_check" == *"is alive"* ]]
+                                                        then
+                                                                echo "  Destination filer can ping source filer."
+                                                                echo
+
+                                                        elif [[ "$dest_ping_source_check" == *"ping: unknown host:"* ]]
+                                                        then
+                                                                echo "  Source filer can ping destination filer but destination filer CANNOT ping source filer."
+                                                                vfiler_problem="dest_pfiler_cant_ping_source_filer"
+                                                                dns_resolution_problem_array=("${dns_resolution_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+
+                                                        fi
+
+                                        elif [[ "$source_ping_dest_check" == *"ping: unknown host:"* ]]
+                                        then
+                                                echo "  Source filer CANNOT resolve DNS for $dest_pfiler"
+                                                        if [[ "$dest_ping_source_check" == *"is alive"* ]]
+                                                        then
+                                                                echo "  Source filer CANNOT ping destination filer but destination filer can ping source filer."
+                                                                vfiler_problem="dest_can_ping_source_source_cant_ping_dest"
+                                                                dns_resolution_problem_array=("${dns_resolution_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+
+                                                        elif [[ "$source_ping_dest_check" == *"ping: unknown host:"* ]]
+                                                        then
+                                                                echo "  Both source and destination filers CANNOT ping each other."
+                                                                vfiler_problem="dest_and_source_pfiler_cant_ping_each_other"
+                                                                dns_resolution_problem_array=("${dns_resolution_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+
+                                                        fi
+                                        else
+                                                echo "  Something else went wrong for $pfiler_to_vfiler_index."
+                                                vfiler_problem="something_else_went_wrong_during_dns_resolution_check"
+                                                dns_resolution_problem_array=("${dns_resolution_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+                                        fi
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "DNS resolution checking between source and destination filers completed."
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+#check ipspaces
+function ipspace_check()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin checking for ipspace compatability."
+        echo
+                for index in "${pfiler_to_vfiler_same_dfm_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler
+                        do
+                                ipspace=`ssh $source_pfiler vfiler status -r $vfiler | grep ipspace | awk '{print $2}'`
+                                dest_pfiler_ipspace_check=`ssh $dest_pfiler ipspace list | grep $ipspace`
+
+                                        if [ "$dest_pfiler_ipspace_check" != "" ]
+                                        then
+                                                echo "  Source vfiler $vfiler uses ipspace '$ipspace' which IS present on destination filer $dest_pfiler."
+
+                                        elif [ "$dest_pfiler_ipspace_check" = "" ]
+                                        then
+                                                echo "  Source vfiler $vfiler uses ipspace '$ipspace' which IS NOT present on destination filer $dest_pfiler."
+                                                vfiler_problem="dest_pfiler_doesnt_have_source_vfilers_ipspace"
+                                                ipspace_problem_array=("${ipspace_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+
+                                        else
+                                                echo "  Something else went wrong when looking up ipspace information for vfiler $vfiler."
+                                                vfiler_problem="something_else_went_wrong_during_ipspace_check"
+                                                ipspace_problem_array=("${ipspace_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $vfiler_problem" )
+                                        fi
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "IPspace checking completed."
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+#aggregate checking, has to come after volume names
+function volume_aggregate_checking()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin volume gathering and aggregate compatibility checking."
+        echo "    !!!NOTE - This script assumes all destination filers have 64-bit aggregates"
+        echo "              and will advise of any 32bit upgrades needed!!!"
+        echo
+
+        ##these nested for/while loops are gross but the best way I could figure
+        ##out how to do this
+        ##
+        ##recursing through 'pfiler_to_vfiler_same_dfm_array' array first to
+        ##investigate these items on a per-vfiler basis vs. per-volume basis
+
+                # array containing just vfiler, target pfiler, and source pfiler
+                for index in "${pfiler_to_vfiler_same_dfm_array[@]}"
+                do
+                        ##splitting variables based on index
+                        while IFS=" " read vfiler source_pfiler dest_pfiler
+                        do
+                                source_pfiler_vol_status_v=`ssh $source_pfiler vol status -v`
+
+                                source_aggr_formatted=`ssh $source_pfiler aggr status | grep -v 'Aggr State' | awk '{print $1}' | tr '\n' '|' | sed -e 's/bit|/bit\n/g' | tr '|' ' '`
+                                source_aggr_32bit=`echo "$source_aggr_formatted" | grep 32-bit`
+                                source_aggr_32bit_count=`echo "$source_aggr_formatted" | grep "32-bit" -c`
+                                source_aggr_64bit=`echo "$source_aggr_formatted" | grep 64-bit`
+                                source_aggr_64bit_count=`echo "$source_aggr_formatted" | grep "64-bit" -c`
+
+                                dest_aggr_formatted=`ssh $dest_pfiler aggr status | grep -v 'Aggr State' | awk '{print $1}' | tr '\n' '|' | sed -e 's/bit|/bit\n/g' | tr '|' ' '`
+                                dest_aggr_32bit=`echo "$dest_aggr_formatted" | grep 32-bit`
+                                dest_aggr_32bit_count=`echo "$dest_aggr_32bit" | grep "32-bit" -c`
+                                dest_aggr_64bit=`echo "$dest_aggr_formatted" | grep 64-bit`
+                                dest_aggr_64bit_count=`echo "$dest_aggr_64bit" | grep "64-bit" -c`
+
+                                ##gathering volume names
+                                echo "  Gathering volume names for vfiler '$vfiler'."
+                                echo
+                                        for volume in `ssh $source_pfiler vfiler run $vfiler vol status | grep online | awk '{print $1}' | sort -n`
+                                        do
+                                                echo "          Volume $volume found on vfiler $vfiler."
+                                                source_aggr=`echo "$source_pfiler_vol_status_v" | sed -n "/$volume online/,/Plex \//p" | grep "Containing aggregate" | awk '{print $3}' | sed -e "s/'//g"`
+                                                source_aggr_bit_type=`echo "$source_aggr_formatted" | grep $source_aggr | awk '{print $2}'`
+                                                pfiler_vfiler_volume_array=("${pfiler_vfiler_volume_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume $source_aggr $source_aggr_bit_type")
+                                        done
+                                echo
+                                echo "  Volume name gathering completed for vfiler '$vfiler'."
+                                echo
+                                echo "  Checking source/target aggregate compatability for vfiler '$vfiler' now."
+
+                                        ## array containing the vfiler, target pfiler, source pfiler, and volume
+                                        for index2 in "${pfiler_vfiler_volume_array[@]}"
+                                        do
+                                                ##splitting second array into variables for parsing
+                                                while IFS=" " read vfiler_temp source_pfiler_temp dest_pfiler_temp volume_temp source_aggr_temp sourge_aggr_bit_type_temp
+                                                do
+                                                        if [[ "$vfiler_temp" = "$vfiler" ]]
+                                                        then
+                                                                if [[ "$sourge_aggr_bit_type_temp" = "64-bit" && "$dest_aggr_64bit_count" -ge "1" ]]
+                                                                then
+                                                                        echo "          Source aggr for '$vfiler'|'$volume_temp' is 64-bit.  Compatible destination aggregates on '$dest_pfiler_temp' are:"
+                                                                                for aggr in `echo "$dest_aggr_64bit" | awk '{print $1}'`
+                                                                                do
+                                                                                        echo "                  $aggr"
+                                                                                done
+                                                                        echo
+
+                                                                elif [[ "$sourge_aggr_bit_type_temp" = "64-bit" && "$dest_aggr_64bit_count" -lt "1" ]]
+                                                                then
+                                                                        echo "          Source aggr for '$vfiler'|'$volume_temp' is 64-bit."
+                                                                        echo "          No compatible destination aggregates exist on '$dest_pfiler_temp'."
+                                                                        echo "          A 64-bit upgrade is needed one at least one of these destination aggregates:"
+                                                                                for aggr in `echo "$dest_aggr_32bit" | awk '{print $1}'`
+                                                                                do
+                                                                                        echo "                  $aggr"
+                                                                                        echo "$vfiler_temp $dest_pfiler_temp $aggr 32-bit" >>$scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades_temp
+                                                                                        dest_aggr_needing_upgrade_array=("${dest_aggr_needing_upgrade_array[@]}" "$vfiler_temp $dest_pfiler_temp $aggr 32-bit")
+                                                                                done
+                                                                        echo
+
+                                                                elif [[ "$sourge_aggr_bit_type_temp" = "32-bit" && "$dest_aggr_32bit_count" -ge "1" ]]
+                                                                then
+                                                                        echo "          Source aggr for '$vfiler'|'$volume_temp' is 32-bit.  Compatible destination aggregates on '$dest_pfiler_temp' are:"
+                                                                                for aggr in `echo "$dest_aggr_32bit" | awk '{print $1}'`
+                                                                                do
+                                                                                        echo "                  $aggr"
+                                                                                done
+                                                                        echo
+
+                                                                elif [[ "$sourge_aggr_bit_type_temp" = "32-bit" && "$dest_aggr_32bit_count" -lt "1" ]]
+                                                                then
+                                                                        echo "          Source aggr for '$vfiler'|'$volume_temp' is 32-bit"
+                                                                        echo "          No compatible destination aggregates exist on filer '$dest_pfiler_temp'."
+                                                                        echo "          A 64-bit upgrade is needed for source aggregate '$source_aggr_temp' on source filer '$source_pfiler_temp'"
+                                                                        echo
+                                                                        echo "$vfiler_temp $source_pfiler_temp $source_aggr_temp $sourge_aggr_bit_type_temp" >>$scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades_temp
+                                                                        source_aggr_needing_upgrade_array=("${source_aggr_needing_upgrade_array[@]}" "$vfiler_temp $source_pfiler_temp $source_aggr_temp $sourge_aggr_bit_type_temp")
+
+                                                                fi
+
+                                                        fi
+
+                                                done <<< $index2
+
+                                        done
+
+                        done <<< $index
+                done
+
+                if [ -a $scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades_temp ]
+                then
+                        cat $scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades_temp | sort -u | sort -n >>$scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades
+                        rm -rf $scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades_temp
+                fi
+
+                if [ -a $scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades_temp ]
+                then
+                        cat $scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades_temp | sort -u | sort -n >>$scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades
+                        rm -rf $scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades_temp
+                fi
+
+        sleep 3
+        echo
+        echo "Aggregate compatibility checking completed."
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+#part of function 'gather_volume_information'
+### I should be able to speed this up I think
+function file_size_fixed_check()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin checking for the volume option 'fs_size_fixed=on'"
+        echo
+                for index in "${pfiler_vfiler_volume_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler volume source_aggr
+                        do
+                                fs_fixed_test=`ssh -n $source_pfiler vol status -v $volume | egrep "fs_size_fixed=on"`
+
+                                        if [ "$fs_fixed_test" != "" ]
+                                        then
+                                                echo "  Volume $volume on $vfiler has volume option 'fs_size_fixed' set to 'on', correct this before starting migration."
+                                                echo "  Command to fix this is :"
+                                                echo "          ssh $source_pfiler vol options $volume fs_size_fixed off"
+                                                echo
+                                                file_size_fixed_problem_array=("${file_size_fixed_problem_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume file_size_fixed_enabled")
+                                        else
+                                                echo "  Volume $volume on $vfiler has volume option 'fs_size_fixed' set to 'off' and no action is needed."
+                                        fi
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "Volume fs_size_fixed=on checking completed"
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+#part of function 'gather_volume_information'
+##no good way to speed this up, vol size has to be done on a per-volume basis
+function gather_volume_size()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin volume size gathering."
+        echo
+                for index in "${pfiler_vfiler_volume_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler volume source_aggr
+                        do
+                                volsize=`ssh -n $source_pfiler vol size $volume | grep 'has size ' | awk '{print $8}' | sed -e 's/\.//g'`
+                                echo "  Volume $volume on $vfiler has a volume size of $volsize."
+                                pfiler_vfiler_volume_volsize_array=("${pfiler_vfiler_volume_volsize_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume $volsize")
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "Volume size gathering completed."
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+#part of function 'gather_volume_information
+#maybe change this function name
+function volume_size_audit()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        echo "Begin checking for '_nosnap' and volumes under 10GB in size."
+        echo
+                for index in "${pfiler_vfiler_volume_volsize_array[@]}"
+                do
+                        while IFS=" " read vfiler source_pfiler dest_pfiler volume volsize
+                        do
+                                snap_reserve=`ssh $source_pfiler snap reserve $volume | awk '{print $7}' | sed -e 's/%//g'`
+                                volsize_unit=`echo ${volsize: -1:1}`
+                                volsize_without_unit=`echo "${volsize%?}"`
+
+                                        if [ "$volsize_unit" = "t" ]
+                                        then
+                                                volsize_in_k=$(echo "scale=2; $volsize_without_unit * 1073741824" | bc -l)
+                                        elif [ "$volsize_unit" = "g" ]
+                                        then
+                                                volsize_in_k=$(echo "scale=2; $volsize_without_unit * 1048576" | bc -l)
+                                        elif [ "$volsize_unit" = "m" ]
+                                        then
+                                                volsize_in_k=$(echo "scale=2; $volsize_without_unit * 1024" | bc -l)
+                                        elif [ "$volsize_unit" = "k" ]
+                                        then
+                                                volsize_in_k=`echo $volsize_without_unit`
+                                        fi
+
+                                        if [[ "$volsize_in_k" -lt "10485760" ]]
+                                        then
+                                                if [[ "$volume" == *"_nosnap"* ]]
+                                                then
+                                                        #because, if the volume is under 10G and a nosnap volume it needs to be 12.5G to accommodate snap reserve
+                                                        new_volsize_with_unit="12.5g"
+                                                        echo "  Volume '$volume' is too small (flexvols need to be at least 10g) and also a '_nosnap' volume."
+                                                        echo "          Change the volume size to 12.5GB with a snap reserve of 20%."
+                                                        echo
+                                                        nosnap_volume_no_reserve_too_small_array=("${nosnap_volume_no_reserve_too_small_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume $volsize $new_volsize_with_unit")
+                                                        # vol_too_small_array=("{vol_too_small_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume $volsize")
+                                                else
+                                                        new_volsize_with_unit="10g"
+                                                        echo "  Volume '$volume' is too small (flexvols need to be at least 10g)."
+                                                        echo "          Volume size is "$volsize_in_k"k.  Please resize this volume to at least 10GB before migration."
+                                                        echo
+                                                        vol_too_small_array=("${vol_too_small_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume $volsize $new_volsize_with_unit")
+                                                fi
+                                        fi
+
+                                        if [[ "$volume" == *"_nosnap"* && "$snap_reserve" -lt "20" ]]
+                                        then
+                                                new_volsize_without_unit=$(echo "scale=2; $volsize_without_unit * 1.25" | bc -l)
+                                                new_volsize_with_unit=`echo $new_volsize_without_unit$volsize_unit`
+                                                echo "  Volume '$volume' is a '_nosnap' volume."
+                                                echo "          Increase volume by 25% and provision a 20% snap reserve to account for the snapmirror snapshots."
+                                                echo "          New volume size would be $new_volsize_with_unit."
+                                                echo
+                                                nosnap_volume_no_reserve_array=("${nosnap_volume_no_reserve_array[@]}" "$vfiler $source_pfiler $dest_pfiler $volume $volsize $new_volsize_with_unit")
+                                        fi
+                        done <<< $index
+                done
+        sleep 3
+        echo
+        echo "Checking for '_nosnap' volumes and volumes under 10GB in size finished."
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+function gather_volume_information()
+{
+        file_size_fixed_check
+        gather_volume_size
+        volume_size_audit
+}
+
+
+####Add functions here for each type of problem so you can pipe it to | column -t in function 'problems_found'
+
+
+function problem_source_aggrs()
+{
+        echo "Source_Vfiler Source_Pfiler Souce_Aggregate Source_Aggregate_Status"
+        cat $scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades
+}
+
+
+function problem_dest_aggrs()
+{
+        echo "Source_Vfiler Dest_Pfiler Dest_Aggregate Dest_Aggregate_Status"
+        cat $scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades
+}
+
+
+function problems_found_summary()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        clear
+        echo "The following problems were found during this script that need manual attention before the desired migration can be performed."
+        echo "Please identify and fix all problems below before attempting to setup a DataMotion migration."
+        sleep 3
+        echo
+        echo "============================================="
+        #############Physical Source Filer Detection Problems
+        echo
+                if [ "${#filer_discovery_problem_array[@]}" -ge "1" ]
+                then
+                        echo "These were problems discovering the source filer for these vfilers:"
+                        echo "VFILER DEST_PFILER PROBLEM">$scripttemppath/temp_column_file
+                                for index in "${filer_discovery_problem_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "There were no problems discovering the source filer for any vfilers."
+                fi
+        echo
+        echo "======================="
+        #############DFM Not Managing Source & Destination Pfilers
+        echo
+                if [ "${#managing_dfm_problem_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the managing DFMs for these vfilers:"
+                        echo "VFILER DEST_PFILER PROBLEM">$scripttemppath/temp_column_file
+                                for index in "${managing_dfm_problem_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "There were no problems with DFM mis-matches between source and destination filers."
+                fi
+        echo
+        echo "======================="
+        #############ONTAP Version Problems
+        echo
+                if [ "${#ontap_version_problem_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the ONTAP versions for these filers:"
+                        echo "VFILER SOURCE_PFILER DEST_PFILER PROBLEM" >$scripttemppath/temp_column_file
+                                for index in "${ontap_version_problem_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "There were no ONTAP version problems discovered."
+                fi
+        echo
+        echo "======================="
+        #############DNS Resolution Problems
+        echo
+                if [ "${#dns_resolution_problem_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the source/destination filers being able to resolve each others DNS names for these vfilers:"
+                        echo "VFILER SOURCE_PFILER DEST_PFILER PROBLEM" >$scripttemppath/temp_column_file
+                                for index in "${dns_resolution_problem_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "There were no DNS resolution problems discovered."
+                fi
+        echo
+        echo "======================="
+        #############Ipspace mismatch Problems
+        echo
+                if [ "${#ipspace_problem_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the ipspaces on the destination filer for this vfiler:"
+                        echo "VFILER SOURCE_PFILER DEST_PFILER PROBLEM" >$scripttemppath/temp_column_file
+                                for index in "${ipspace_problem_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "There were no problems with ipspaces discovered."
+                fi
+        echo
+        echo "======================="
+        #############Aggregate mismatch problems
+        echo
+                if [ -s $scripttemppath/source_pfiler_aggregates_needing_64bit_upgrades ]
+                then
+                        echo "These were the problems would with the aggregates on the source filer.  Please upgrade them to 64bit aggregates."
+                        problem_source_aggrs | column -t
+                else
+                        echo "No problems were found with aggregates on the source filer."
+                fi
+        echo
+                if [ -s $scripttemppath/dest_pfiler_aggregates_needing_64bit_upgrades ]
+                then
+                        echo "These were the problems would with the aggregates on the destination filer.  Please upgrade them to 64bit aggregates."
+                        problem_dest_aggrs | column -t
+                else
+                        echo "No problems were found with the aggregates on the destination filer."
+                fi
+        echo
+        echo "======================="
+        #############Vol option file_size_fixed turned on
+        echo
+                if [ "${#file_size_fixed_problem_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the fs_size_fixed=on option being set for the following volumes:"
+                        echo "VFILER SOURCE_PFILER DEST_PFILER VOLUME PROBLEM" >$scripttemppath/temp_column_file
+                                for index in "${file_size_fixed_problem_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "No volumes were found with option 'file_size_fixed' enabled."
+                fi
+        echo
+        echo "======================="
+        #############Flexvols less than 10GB in size
+        echo
+                if [ "${#vol_too_small_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the volumes being less than 10GB.  Grow them to the value listed under NEW_VOLSIZE."
+                        echo "VFILER SOURCE_PFILER DEST_PFILER VOLUME ORIGINAL_VOLSIZE NEW_VOLSIZE" >$scripttemppath/temp_column_file
+                                for index in "${vol_too_small_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "No flexvols were under 10GB in size, the minimum for DataMotion to function properly."
+                fi
+        echo
+        echo "======================="
+        #############nosnap volumes too small and having no snap reserve
+        echo
+                if [ "${#nosnap_volume_no_reserve_too_small_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with the these _nosnap volumes being too small and having no snap reserve for these volumes.  Grow them to the value listed under NEW_VOLSIZE and apply a 20% snap reserve."
+                        echo "VFILER SOURCE_PFILER DEST_PFILER VOLUME ORIGINAL_VOLSIZE NEW_VOLSIZE" >$scripttemppath/temp_column_file
+                                for index in "${nosnap_volume_no_reserve_too_small_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "No _nosnap volumes were found to be too small and lacking a snap reserve."
+                fi
+        echo
+        echo "======================="
+        #############nosnap needing to be grown and have 20% snap reserve applied
+        echo
+                if [ "${#nosnap_volume_no_reserve_array[@]}" -ge "1" ]
+                then
+                        echo "There were problems with these _nosnap volumes needing to be grown to 125% and having a snap reserve of 20% applied.  Grow them to the value listed under NEW_VOLSIZE and apply a 20% snap reserve"
+                        echo "VFILER SOURCE_PFILER DEST_PFILER VOLUME ORIGINAL_VOLSIZE NEW_VOLSIZE" >$scripttemppath/temp_column_file
+                                for index in "${nosnap_volume_no_reserve_array[@]}"
+                                do
+                                        echo "$index" >>$scripttemppath/temp_column_file
+                                done
+                        cat $scripttemppath/temp_column_file | column -t
+                        rm $scripttemppath/temp_column_file
+                else
+                        echo "No _nosnap volumes were found lacking a snap reserve."
+                fi
+        echo
+        echo "============================================="
+        echo
+        IFS=$oldifs
+}
+
+
+## need to add online migration options, currently only does offline
+## need to add fix if multiple destination aggregates are available
+## managing DFM headache
+function dfpm_migrate_start_cli_generator()
+{
+        oldifs=$IFS
+        IFS=$'\n'
+        clear
+        echo "Welcome to the DataMotion CLI Command Generator."
+        echo
+        echo "THIS PORTION OF THE SCRIPT IS VERY BETA AND SHOULD ONLY BE USED FOR TESTING!!!"
+        echo "DO NOT RELY ON THIS FOR ANY TIME SENSITIVE MIGRATION!!!"
+        echo "TALK TO JOEL EDSTROM WITH ANY QUESTIONS ON THIS."
+        echo
+        echo "THIS SCRIPT DOES NOT SUPPORT ONLINE MIGRATIONS AT THIS TIME.  -- 01/20/2014"
+        echo "If you are unsure how to use the DFPM CLI commands it is not recommended you use the output from this script."
+        echo
+        echo "This script helps generate the 'DFPM migrate start' commands as they can be intricate to perform by hand."
+        echo
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~"
+        sleep 5
+
+                for index in "${pfiler_to_vfiler_array[@]}"
+                do
+                        while IFS=" " read vfiler_name source_pfiler target_pfiler
+                        do
+                                echo "Working on DFPM CLI commands for source vfiler '$vfiler_name' going to target controller '$target_pfiler'."
+                                echo
+
+                                vfiler_id=`grep $vfiler_name $master_vfiler_list| awk '{print $2}'`
+                                vfiler_status=`ssh $source_pfiler vfiler status -r $vfiler_name`
+                                ipspace=`echo "$vfiler_status" | grep "ipspace" | awk '{print $2}'`
+                                ip_address=`echo "$vfiler_status" | grep "IP address" | awk '{print $3}'`
+                                netmask=`ssh $source_pfiler rdfile /etc/rc | grep $ip_address | awk '{print $6}'`
+                                target_aggr=`ssh $target_pfiler aggr status | grep online | awk '{print $1}'`
+                                target_aggr_number=`ssh $target_pfiler aggr status | grep online -c`
+                                target_interface=`ssh $target_pfiler ipspace list | grep $ipspace | awk '{print $2}' | sed -e 's/(//g' | sed -e 's/)//g'`
+
+                                        if [ "$target_aggr_number" -ge "2" ]
+                                        then
+                                                echo "Multiple aggreagtes were found on target filer $target_pfiler."
+                                                echo "Do you want to move all source volumes to the same target aggregate?"
+                                                read all_one_aggr_answer </dev/tty
+                                                echo
+                                                        if [[ "$all_one_aggr_answer" = "yes" || "$all_one_aggr_answer" = "y" ]]
+                                                        then
+                                                                unset target_aggr
+                                                                aggrarray[0]=blank
+                                                                aggrcount=`ssh $target_pfiler aggr status | grep online | awk '{print $1}' | wc -l`
+
+                                                                        for aggr_line in `ssh $target_pfiler aggr status | grep online | awk '{print $1}' | sort -n`
+                                                                        do
+                                                                                aggrarray=("${aggrarray[@]}" "$aggr_line")
+                                                                        done
+
+                                                                echo "Okay, here are the possible target aggregates.  Please pick an aggregate:"
+                                                                b=1
+                                                                        while [ "$b" -le "$aggrcount" ]
+                                                                        do
+                                                                                echo "  No. $b - ${aggrarray[$b]}"
+                                                                                b=$((b+1))
+                                                                        done
+                                                                echo
+                                                                echo "Enter which aggregate number (integer ONLY) to place source volumes on:"
+                                                                read aggr_choice </dev/tty
+                                                                        if [[ $aggr_choice =~ ^[0-9]+$ ]]
+                                                                        then
+                                                                                echo
+                                                                                target_aggr=${aggrarray[$aggr_choice]}
+                                                                        else
+                                                                                echo "Entry was not an integer.  Exiting script."
+                                                                                exit 1
+                                                                        fi
+                                                        else
+                                                                echo "Mapping source volumes to more than one target aggregate is not currently supported."
+                                                                echo "Exiting script."
+                                                                exit 1
+                                                        fi
+                                        fi
+
+                                source_vfiler_vols=`echo "$vfiler_status" | grep Path | awk '{print $2}' | sed -e 's/\/vol\///g'`
+                                        for vol in `echo "$source_vfiler_vols"`
+                                        do
+                                                map_string="$vfiler_name:/$vol=$target_pfiler:$target_aggr,"
+                                                a=""$a""$map_string""
+                                        done
+
+                                echo "Source Info:"
+                                echo "  Source Filer - $source_pfiler"
+                                echo "  Source Vfiler - $vfiler_name"
+                                echo "  Source ipspace - $ipspace"
+                                echo "  Source IP address - $ip_address"
+                                echo "  Source NetMask - $netmask"
+                                echo "  Source Volumes :"
+                                        for volume in `echo "$source_vfiler_vols"`
+                                        do
+                                                echo "          $volume"
+                                        done
+                                echo "---"
+                                echo "Target Info:"
+                                echo "  Target Filer - $target_pfiler"
+                                echo "  Target Aggregate - $target_aggr"
+                                echo "  Target Volume Mapping:"
+                                        for volume in `echo "$source_vfiler_vols"`
+                                        do
+                                                echo "          $volume -> $target_aggr"
+                                        done
+                                echo "---"
+                                echo "Do the above parameters look right to you? (enter 'yes' or 'no'):"
+                                read answer_y_n </dev/tty
+                                echo
+                                        if [[ "$answer_y_n" = "yes" || "$answer_y_n" = "y" ]]
+                                        then
+                                                echo "  This will be the actual dry run command:"
+                                                echo
+                                                # echo "dfpm migrate start -D -f $a -i $ip_address:$target_interface:$netmask $vfiler_id"
+                                                echo "dfpm migrate start -D -f $a -i $ip_address:$target_interface:$netmask $vfiler_name"
+                                                echo
+                                                echo "  To actually begin an offline DataMotion migration remove the '-D' flag from the above command."
+                                                echo "dfpm migrate start -f $a -i $ip_address:$target_interface:$netmask $vfiler_name"
+                                                echo
+                                                echo "  This is the command to check status of DataMotion:"
+                                                echo "dfpm migrate status $vfiler_name"
+                                                echo
+                                                echo "  This is the dry run command for the DataMotion cutover:"
+                                                echo "dfpm migrate cutover -D $vfiler_id"
+                                                echo
+                                                echo "  To perform the DataMotion cutover use this command:"
+                                                echo "dfpm migrate cutover $vfiler_id"
+                                                echo
+                                                echo "  To cleanup the DataMotion migration use this command:"
+                                                echo "dfpm migrate cleanup $vfiler_name"
+                                                echo
+                                                echo "---"
+                                        else
+                                                echo "Please identify any issues with the above output and contact Joel Edstrom."
+                                        fi
+
+                                unset map_string
+                                unset a
+                        done <<< $index
+                done
+
+        IFS=$oldifs
+}
+
+
+#MAIN
+
+
+menu
+        # if [[ "$1" = "precheck" || "$1" = "" ]]
+        # then
+        #       script_prep_work
+        #       determineinput
+        #       gather_source_pfiler
+        #       check_managing_dfm
+        #       ontap_version_check
+        #       pfiler_dns_check
+        #       ipspace_check
+        #       volume_aggregate_checking
+        #       gather_volume_information
+        #       problems_found_summary
+
+        # elif [[ "$1" != "precheck" && "$1" != "" ]]
+        # then
+        #       dfpm_migrate_start_cli_generator
+        # fi
+

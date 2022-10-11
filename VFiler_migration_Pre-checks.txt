@@ -1,0 +1,136 @@
+CR00636696
+
+
+nidaros:~ # ssh eg-nasprod-f02 vfiler status -r prod-ecom-f0061
+root@eg-nasprod-f02's password:
+prod-ecom-f0061                  running
+   ipspace: ecom-3022
+   IP address: 10.215.126.74 [ecomvif0-3022]
+   Path: /vol/prod_ecom_f0061_root [/etc]
+   Path: /vol/findlaw_tracker2p_n01ora1_nosnap
+   Path: /vol/findlaw_tracker2p_s01ora1_snap
+   Path: /vol/findlaw_tracker2p_s01oraadm1_snap
+   UUID: 6aeb5ad0-e27e-11df-8d56-00a0980f20ea
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 df -h
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+Filesystem               total       used      avail capacity  Mounted on
+/vol/prod_ecom_f0061_root/      819MB       10MB      808MB       1%  /vol/prod_ecom_f0061_root/
+/vol/prod_ecom_f0061_root/.snapshot      204MB       12MB      191MB       6%  /vol/prod_ecom_f0061_root/.snapshot
+/vol/findlaw_tracker2p_n01ora1_nosnap/      177GB      131GB       45GB      74%  /vol/findlaw_tracker2p_n01ora1_nosnap/
+/vol/findlaw_tracker2p_n01ora1_nosnap/.snapshot        0MB       96MB        0MB     ---%  /vol/findlaw_tracker2p_n01ora1_nosnap/.snapshot
+/vol/findlaw_tracker2p_s01ora1_snap/     3240GB     2870GB      370GB      89%  /vol/findlaw_tracker2p_s01ora1_snap/
+/vol/findlaw_tracker2p_s01ora1_snap/.snapshot      810GB      122GB      687GB      15%  /vol/findlaw_tracker2p_s01ora1_snap/.snapshot
+/vol/findlaw_tracker2p_s01oraadm1_snap/       10GB     3364MB     6875MB      33%  /vol/findlaw_tracker2p_s01oraadm1_snap/
+/vol/findlaw_tracker2p_s01oraadm1_snap/.snapshot     2560MB     1659MB      900MB      65%  /vol/findlaw_tracker2p_s01oraadm1_snap/.snapshot
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 quota report
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+                                 K-Bytes             Files
+Type       ID    Volume    Tree  Used      Limit     Used    Limit   Quota Specifier
+----- -------- -------- -------- --------- --------- ------- ------- ---------------
+tree         1 findlaw_tracker2p_n01ora1_nosnap n01oracluster1     71908   2097152       9       - /vol/findlaw_tracker2p_n01ora1_nosnap/n01oracluster1
+tree         2 findlaw_tracker2p_n01ora1_nosnap n01oradata1 126735788 149946368      46       - /vol/findlaw_tracker2p_n01ora1_nosnap/n01oradata1
+tree         3 findlaw_tracker2p_n01ora1_nosnap n01oraflash1         0   2097152       1       - /vol/findlaw_tracker2p_n01ora1_nosnap/n01oraflash1
+tree         4 findlaw_tracker2p_n01ora1_nosnap n01oraadmin1  10091232  31457280   31334       - /vol/findlaw_tracker2p_n01ora1_nosnap/n01oraadmin1
+tree         1 findlaw_tracker2p_s01ora1_snap s01oradata1 3002852536 3355443200     275       - /vol/findlaw_tracker2p_s01ora1_snap/s01oradata1
+tree         1 findlaw_tracker2p_s01oraadm1_snap s01oraadmin1   3422684  10485760    2875       - /vol/findlaw_tracker2p_s01oraadm1_snap/s01oraadmin1
+nidaros:~ #
+nidaros:~ #  ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 exportfs
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+/vol/findlaw_tracker2p_n01ora1_nosnap/n01oraflash1      -sec=sys,rw=minersville:minturn,anon=0
+/vol/findlaw_tracker2p_n01ora1_nosnap/n01oracluster1    -sec=sys,rw=minersville:minturn,anon=0
+/vol/findlaw_tracker2p_n01ora1_nosnap/n01oraadmin1      -sec=sys,rw=minersville:minturn,anon=0
+/vol/findlaw_tracker2p_s01oraadm1_snap/s01oraadmin1     -sec=sys,rw=minersville:minturn,anon=0
+/vol/findlaw_tracker2p_s01ora1_snap/s01oradata1/.snapshot       -sec=sys,ro=mindoro-nas.int.westgroup.com:miltonvale.int.westgroup.com:mindoro.int.westgroup.com:milladore-nas.int.westgroup.com:milladore.int.westgroup.com:miltonsburg.int.westgroup.com
+/vol/findlaw_tracker2p_s01ora1_snap/s01oradata1 -sec=sys,rw=minersville:minturn,anon=0
+/vol/prod_ecom_f0061_root       -sec=sys,rw=nerstrand.int.westgroup.net:newnan.int.westgroup.net:nidaros.int.westgroup.net:norfork.int.westgroup.net:nobleton.int.westgroup.net:newpoint.int.westgroup.net,anon=0
+/vol/findlaw_tracker2p_n01ora1_nosnap/n01oradata1       -sec=sys,rw=minersville:minturn,anon=0
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 snapvault snap sched
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+create findlaw_tracker2p_s01ora1_snap sv_findlaw_tracker2p_s01ora1_snap_s01oradata1 7@-
+create findlaw_tracker2p_s01oraadm1_snap sv_findlaw_tracker2p_s01oraadm1_snap 7@sun-sat@1
+nidaros:~ #
+nidaros:~ #  ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 snapvault status
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+Snapvault primary is ON.
+Source                                                  Destination                                                              State          Lag        Status
+prod-ecom-f0061:/vol/findlaw_tracker2p_s01oraadm1_snap  cps-cs-bkp-h02:/vol/sv_14_cps_oraadm_grp02/findlaw_tracker2p_s01oraadm1  Source         05:27:01   Idle
+prod-ecom-f0061:/vol/findlaw_tracker2p_s01ora1_snap     ecome3:/vol/sv_14_findlaw_tracker2p_s01ora1_snap/1                       Source         11:07:00   Idle
+nidaros:~ #
+nidaros:~ #  ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 snapmirror status
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+Snapmirror is on.
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 snapmirror status | grep -iE "prod_ecom_f0061_root|findlaw_tracker2p_n01ora1_nosnap|findlaw_tracker2p_s01ora1_snap|findlaw_tracker2p_s01oraadm1_snap"
+root@eg-nasprod-f02's password:
+eg-nasprod-f02:findlaw_tracker2p_n01ora1_nosnap   eg-nasecom-f06:findlaw_tracker2p_n01ora1_nosnap   Source         00:01:39   Idle
+eg-nasprod-f02:findlaw_tracker2p_s01ora1_snap     eg-nasecom-f06:findlaw_tracker2p_s01ora1_snap     Source         00:01:39   Idle
+eg-nasprod-f02:findlaw_tracker2p_s01oraadm1_snap  eg-nasecom-f06:findlaw_tracker2p_s01oraadm1_snap  Source         00:01:39   Idle
+eg-nasprod-f02:prod_ecom_f0061_root               eg-nasecom-f06:prod_ecom_f0061_root               Source         00:01:45   Idle
+nidaros:~ #
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 dns info
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+DNS is enabled
+
+DNS caching is enabled
+
+15745 cache hits
+303983 cache misses
+17 cache entries
+226133 expired entries
+226123 cache replacements
+
+IP Address                                     State   Last Polled                  Avg RTT Calls  Errs
+-------------------------------------------------------------------------------------------------------------
+167.68.226.250                                 UP      Wed Feb 18 06:26:45 CST 2015       0 219530    43
+167.68.227.250                                 UP      Sun Feb  8 04:04:06 CST 2015       0   206     0
+
+Default domain: westlan.com
+Search domains: westlan.com
+
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 netstat -nr
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+Routing tables
+
+Internet:
+Destination      Gateway            Flags     Refs     Use  Interfaces
+default          10.215.127.254     UGS        43 207074933873  ecomvif0-3022
+10.215.126/23    link#17            UC          0        0  ecomvif0-3022
+10.215.126.60    2:a0:98:f:20:eb    UHL         0        1  lo
+10.215.126.74    2:a0:98:f:20:eb    UHL         0    17104  lo
+10.215.127.250   0:26:98:2:45:41    UHL         0        0  ecomvif0-3022
+10.215.127.251   0:26:51:c7:3c:41   UHL         0        0  ecomvif0-3022
+10.215.127.254   0:7:b4:0:0:2       UHL         1       70  ecomvif0-3022
+10.215.127.255   ff:ff:ff:ff:ff:ff  UHL         0   544112  ecomvif0-3022
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 lun show
+root@eg-nasprod-f02's password:
+
+===== prod-ecom-f0061
+nidaros:~ #
+nidaros:~ # ssh eg-nasprod-f02 vfiler run prod-ecom-f0061 cifs shares
+root@eg-nasprod-f02's password:
+CIFS service is disallowed.
+
+===== prod-ecom-f0061
+nidaros:~ #

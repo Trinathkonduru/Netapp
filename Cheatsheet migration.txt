@@ -1,0 +1,206 @@
+﻿STEP1: create export policy :(repeat this step for each volume)			
+=========================================================			
+			
+vserver export-policy create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_n01ora1_nosnap			
+vserver export-policy create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_s01ora1_snap			
+vserver export-policy create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_s01oraadm1_snap			
+vserver export-policy create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_n02ora1_nosnap			
+vserver export-policy create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_s02ora1_snap			
+vserver export-policy create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_s02oraadm1_snap			
+			
+			
+STEP 2:Modify Volume/Qtree Export-Policies:			
+============================================			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap -qtree n01oracluster1  -export-policy cb0203_trl_oc414a_n01ora1_nosnap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap -qtree n01oraflash1  -export-policy cb0203_trl_oc414a_n01ora1_nosnap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap -qtree n01oradata1  -export-policy cb0203_trl_oc414a_n01ora1_nosnap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap -qtree n01oraadmin1 -export-policy cb0203_trl_oc414a_n01ora1_nosnap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap -qtree n02oraadmin1  -export-policy cb0203_trl_oc415a_n02ora1_nosnap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap -qtree n02oradata1  -export-policy cb0203_trl_oc415a_n02ora1_nosnap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap -qtree n02oraflash1  -export-policy cb0203_trl_oc415a_n02ora1_nosnap				
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap -qtree s01oradata1  -export-policy cb0203_trl_oc414a_s01ora1_snap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -qtree s01oraadmin1  -export-policy cb0203_trl_oc414a_s01oraadm1_snap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap -qtree s02oradata1  -export-policy cb0203_trl_oc415a_s02ora1_snap			
+qtree modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -qtree s02oraadmin1  -export-policy cb0203_trl_oc415a_s02oraadm1_snap			
+			
+			
+STEP 3: Modify the policy for volume: Repeat for each volume			
+============================================================			
+vol modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap -policy cb0203_trl_oc414a_n01ora1_nosnap			
+vol modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap -policy cb0203_trl_oc414a_s01ora1_snap			
+vol modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -policy cb0203_trl_oc414a_s01oraadm1_snap			
+vol modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap -policy cb0203_trl_oc415a_n02ora1_nosnap			
+vol modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap -policy cb0203_trl_oc415a_s02ora1_snap			
+vol modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -policy cb0203_trl_oc415a_s02oraadm1_snap			
+vol modify -vserver cisclnt-e0006 -volume cisclnt_e0006_root -policy default			
+			
+		
+			
+STEP6: Create the default export-policy rule (repeat this command for every nfs client)			
+============================================================			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname default -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule never -superuser never			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname default -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule never -superuser never			
+			
+			
+STEP7:Create volume export policy rule (repeat this command for each volume and nfs client)			
+============================================================			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_n01ora1_nosnap -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_n01ora1_nosnap -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_s01ora1_snap -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_s01ora1_snap -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_s01oraadm1_snap -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc414a_s01oraadm1_snap -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_n02ora1_nosnap -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_n02ora1_nosnap -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_s02ora1_snap -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_s02ora1_snap -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_s02oraadm1_snap -protocol any -clientmatch c200geuocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+vserver export-policy rule create -vserver cisclnt-e0006 -policyname cb0203_trl_oc415a_s02oraadm1_snap -protocol any -clientmatch c078pcnocdbqe.int.thomsonreuters.com -rorule sys -rwrule sys -superuser sys			
+			
+			
+Create Quota: 			
+=========			
+This is not required if quotas is off in source.			
+quota show -vserver cisclnt-e0006(If it is off)			
+quota on -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap			
+quota on -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap			
+quota on -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap			
+quota on -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap			
+quota on -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap			
+quota on -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap			
+quota report  -vserver cisclnt-e0006			
+			
+			
+Post cutover and given access to Customer  :			
+=====================================			
+			
+Schedule Snapshot policy in source : (only for oraadmin volumes)			
+=================================			
+			
+job schedule cron create -name cb0203_trl_oc414a_s01oraadm1_snap -minute 0 -hour 1			
+job schedule cron show -name cb0203_trl_oc414a_s01oraadm1_snap			
+			
+job schedule cron create -name cb0203_trl_oc415a_s02oraadm1_snap -minute 0 -hour 2			
+job schedule cron show -name cb0203_trl_oc415a_s02oraadm1_snap			
+			
+volume snapshot policy create -vserver cisclnt-e0006 -policy cb0203_trl_oc414a_s01oraadm1_snap -enabled true -schedule1 cb0203_trl_oc414a_s01oraadm1_snap -count1 7 -snapmirror-label1 snapvault -prefix1 sv_cb0203_trl_oc414a_s01oraadm1_snap			
+volume snapshot policy create -vserver cisclnt-e0006 -policy cb0203_trl_oc415a_s02oraadm1_snap -enabled true -schedule1 cb0203_trl_oc415a_s02oraadm1_snap -count1 7 -snapmirror-label1 snapvault -prefix1 sv_cb0203_trl_oc415a_s02oraadm1_snap			
+			
+			
+#Use this command to add snapshot polycy to volume SNAP volumes			
+=========================================================			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -policy cb0203_trl_oc414a_s01oraadm1_snap -snapshot-policy cb0203_trl_oc414a_s01oraadm1_snap			
+volume show -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -fileds snapshot-policy			
+			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -policy cb0203_trl_oc415a_s02oraadm1_snap -snapshot-policy cb0203_trl_oc415a_s02oraadm1_snap			
+volume show -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -fields snapshot-policy			
+			
+			
+Setup snap autodelete on volumes (run for each SNAP volume) - Repetitive for each snap volume 			
+============================================================================================			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -space-mgmt-try-first snap_delete			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap true			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -trigger snap_reserve			
+volume snapshot autodelete show -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap			
+			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap -space-mgmt-try-first snap_delete			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap true			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap -trigger snap_reserve			
+volume snapshot autodelete show -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap			
+			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -space-mgmt-try-first snap_delete			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap true			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -trigger snap_reserve			
+volume snapshot autodelete show -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap			
+			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap -space-mgmt-try-first snap_delete			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap true			
+volume snapshot autodelete modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap -trigger snap_reserve			
+volume snapshot autodelete show -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap			
+			
+			
+volume show -vserver cisclnt-e0006 -fields space-mgmt-try-first			
+			
+			
+QoS Policy Group Creation - Repetitive for each volume (snap and nosnap)  			
+============================================================================			
+Qos policy-group create -policy-group cb0203_trl_oc414a_n01ora1_nosnap -vserver cisclnt-e0006 -max-throughput 6000iops			
+Qos policy-group create -policy-group cb0203_trl_oc414a_s01ora1_snap -vserver cisclnt-e0006 -max-throughput 6000iops			
+Qos policy-group create -policy-group cb0203_trl_oc414a_s01oraadm1_snap -vserver cisclnt-e0006 -max-throughput 6000iops			
+Qos policy-group create -policy-group cb0203_trl_oc415a_n02ora1_nosnap -vserver cisclnt-e0006 -max-throughput 6000iops			
+Qos policy-group create -policy-group cb0203_trl_oc415a_s02ora1_snap -vserver cisclnt-e0006 -max-throughput 6000iops			
+Qos policy-group create -policy-group cb0203_trl_oc415a_s02oraadm1_snap -vserver cisclnt-e0006 -max-throughput 6000iops			
+			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap -qos-policy-group cb0203_trl_oc414a_n01ora1_nosnap			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap -qos-policy-group cb0203_trl_oc414a_s01ora1_snap			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap -qos-policy-group cb0203_trl_oc414a_s01oraadm1_snap			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap -qos-policy-group cb0203_trl_oc415a_n02ora1_nosnap			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap -qos-policy-group cb0203_trl_oc415a_s02ora1_snap			
+volume modify -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap -qos-policy-group cb0203_trl_oc415a_s02oraadm1_snap			
+			
+			
+volume show -vserver cisclnt-e0006 -fields qos-policy-group			
+			
+			
+Delete snapshots which were created by 7MTT 			
+====================================================			
+snapshot show -vserver cisclnt-e0006			
+			
+snapshot delete -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_n01ora1_nosnap * (or delete individual snapshots)			
+snapshot delete -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01ora1_snap * (or delete individual snapshots)			
+snapshot delete -vserver cisclnt-e0006 -volume cb0203_trl_oc414a_s01oraadm1_snap * (or delete individual snapshots)			
+snapshot delete -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_n02ora1_nosnap * (or delete individual snapshots)			
+snapshot delete -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02ora1_snap * (or delete individual snapshots)			
+snapshot delete -vserver cisclnt-e0006 -volume cb0203_trl_oc415a_s02oraadm1_snap * (or delete individual snapshots)			
+			
+			
+**************************************Primary *************************************			
+			
+			
+			
+Create secondary volumes for SnapVault as type “DP” on the destination cluster - Repeat for each of the snap volumes
+=====================================================================================================================
+volume create -vserver cis-ss-clbk-e01 -volume sv_07_cb0203_trl_oc414a_s01ora1_snap -aggregate aggr1_data_b01 -size 3200GB -security-style unix -space-guarantee none -percent-snapshot-space 0 -language en_US -type DP
+volume create -vserver cis-ss-clbk-e01 -volume sv_07_cb0203_trl_oc414a_s01oraadm1_snap -aggregate aggr1_data_b01 -size 25GB -security-style unix -space-guarantee none -percent-snapshot-space 0 -language en_US -type DP
+volume create -vserver cis-ss-clbk-e01 -volume sv_07_cb0203_trl_oc415a_s02ora1_snap -aggregate aggr1_data_b01 -size 800GB -security-style unix -space-guarantee none -percent-snapshot-space 0 -language en_US -type DP
+volume create -vserver cis-ss-clbk-e01 -volume sv_07_cb0203_trl_oc415a_s02oraadm1_snap -aggregate aggr1_data_b01 -size 25GB -security-style unix -space-guarantee none -percent-snapshot-space 0 -language en_US -type DP
+
+
+Create a cron job schedule if it does not exist in the destination - one time activity 
+=======================================================================================
+job schedule cron show <<make sure there is existing schedule>>
+job schedule cron create -name xdp_3 -minute 0 -hour 3 - not required if its already there...
+
+Destination Snapmirror Policy: - Repeat for each of the sanp volumes.
+=======================================================================================
+snapmirror policy create -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc414a_s01ora1_snap
+snapmirror policy create -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc414a_s01oraadm1_snap
+snapmirror policy create -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc415a_s02ora1_snap
+snapmirror policy create -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc415a_s02oraadm1_snap
+
+snapmirror policy add-rule -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc414a_s01ora1_snap -snapmirror-label snapvault -keep 14
+snapmirror policy add-rule -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc414a_s01oraadm1_snap -snapmirror-label snapvault -keep 7
+snapmirror policy add-rule -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc415a_s02ora1_snap -snapmirror-label snapvault -keep 14
+snapmirror policy add-rule -vserver cis-ss-clbk-e01 -policy sv_07_cb0203_trl_oc415a_s02oraadm1_snap -snapmirror-label snapvault -keep 7
+
+Initialize SnapVault relationship on the destination: - Repeat for each of the snap volumes. 
+===========================================================================================
+snapmirror create -source-path cisclnt-e0006:cb0203_trl_oc414a_s01ora1_snap -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc414a_s01ora1_snap -type XDP -schedule xdp_3 -policy sv_07_cb0203_trl_oc414a_s01ora1_snap
+snapmirror create -source-path cisclnt-e0006:cb0203_trl_oc414a_s01oraadm1_snap -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc414a_s01oraadm1_snap -type XDP -schedule xdp_3 -policy sv_07_cb0203_trl_oc414a_s01oraadm1_snap
+snapmirror create -source-path cisclnt-e0006:cb0203_trl_oc415a_s02ora1_snap -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc415a_s02ora1_snap -type XDP -schedule xdp_3 -policy sv_07_cb0203_trl_oc415a_s02ora1_snap
+snapmirror create -source-path cisclnt-e0006:cb0203_trl_oc415a_s02oraadm1_snap -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc415a_s02oraadm1_snap -type XDP -schedule xdp_3 -policy sv_07_cb0203_trl_oc415a_s02oraadm1_snap
+
+snapmirror initialize -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc414a_s01ora1_snap
+snapmirror initialize -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc414a_s01oraadm1_snap
+snapmirror initialize -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc415a_s02ora1_snap
+snapmirror initialize -destination-path cis-ss-clbk-e01:sv_07_cb0203_trl_oc415a_s02oraadm1_snap
+
+snapmirror show
+snapmirror show -destination-path * -fields Schedule
+
+___________________________________________________________________________________________________________________
+offline 7mode volumes 
+
+
+
+

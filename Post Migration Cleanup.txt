@@ -1,0 +1,58 @@
+As cleanup for a successful migration of existing storage to new servers, please remove Read Write permissions for servers
+
+c540mfridtora, c985xsbidtora
+
+on following QTrees:
+
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s01oraadm1_snap/s01oraadmin1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s02oraadm1_snap/s02oraadmin1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s01ora1_snap/s01oradata1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s02ora1_snap/s02oradata1
+cpsoracle-h0010.int.thomsonreuters.com:/CB0061_trta_indirect_tax2p_14_n01oraarch1_nosnap
+prod-ecom-h0061:/vol/Infra_oraarchalt_cps_nosnap/trta_indirect_tax2p_n01oraarch2
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraggsdata
+cpsoracle-h0007.int.thomsonreuters.com:/CB0061_trta_indirect_tax2p_45_n02oraarch1_nosnap
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oradata1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraadmin1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n02ora1_nosnap/n02oraadmin1
+prod-ecom-h0061:/vol/Infra_oraarchalt_cps_nosnap/trta_45_indirect_tax2p_n02oraarch2
+prod-ecom-h0473:/vol/tta_dbsharedexportprodh_nosnap/n01oraexport1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraggsbin
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n02ora1_nosnap/n02oradata1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraggs
+
+These QTrees must retain other permissions they have.
+
+
+The following QTrees are not mounted and can be reclaimed. They were required temporarily for the same migration.
+The overall volume size can be shrunk by the size of the reclaimed QTrees.
+The QTrees are not mounted by any host, a Unix umount task is not required.
+
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraadmin1tmp
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oracluster1
+
+Please email DATABASE-ENG-TAX after this change has been completed.
+
+STORAGE-SUPPORT would validate
+
+make sure below 2 hosts are not there in exports file entry for all below volume paths..
+c540mfridtora, c985xsbidtora
+
+on following QTrees:
+
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s01oraadm1_snap/s01oraadmin1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s02oraadm1_snap/s02oraadmin1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s01ora1_snap/s01oradata1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_s02ora1_snap/s02oradata1
+cpsoracle-h0010.int.thomsonreuters.com:/CB0061_trta_indirect_tax2p_14_n01oraarch1_nosnap
+prod-ecom-h0061:/vol/Infra_oraarchalt_cps_nosnap/trta_indirect_tax2p_n01oraarch2
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraggsdata
+cpsoracle-h0007.int.thomsonreuters.com:/CB0061_trta_indirect_tax2p_45_n02oraarch1_nosnap
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oradata1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraadmin1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n02ora1_nosnap/n02oraadmin1
+prod-ecom-h0061:/vol/Infra_oraarchalt_cps_nosnap/trta_45_indirect_tax2p_n02oraarch2
+prod-ecom-h0473:/vol/tta_dbsharedexportprodh_nosnap/n01oraexport1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraggsbin
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n02ora1_nosnap/n02oradata1
+prod-ecom-h0338:/vol/trta_indirect_tax2p_n01ora1_nosnap/n01oraggs

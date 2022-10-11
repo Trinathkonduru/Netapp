@@ -1,0 +1,63 @@
+CIFS volume migrading to C Dot
+
+Below are the system name, serial number and vfiler details.
+        System Serial Number: 700000422993 (eg-naslowe-e04)
+        Vfiler name: prod-ecom-e0138
+ 
+ 
+We come across this error when tried to run the “Apply Configuration” precutover step in 7MTT. No specific time.
+Let us know if you need any more details.
+ 
+20933
+Error
+Applying the CIFS local users and groups information from the 7-Mode storage system 'prod-ecom-e0138@167.68.248.124' to the SVM 'cpsprod-e0112'.Failed to apply the CIFS local users and groups information from the 7-Mode storage system 'prod-ecom-e0138@167.68.248.124' to the SVM 'cpsprod-e0112'. Error Code: 337 Reason: Failed processing line 19 of the input file. Reason: Failed to resolve member by the security identifier (SID) S-1-5-21-1149247497-1642356119-618142746-512.
+
+=======================================
+
+I found errors in the CDOT cluster’s logs which appear to correlate with the one you provided:
+ 
+Fri Nov 18 02:02:52 CST [eg-cps-clsp-e01-h01: secd: secd.dns.server.timed.out:warning]: DNS server 167.68.21.253 did not respond to vserver = cpsprod-e0112 within timeout interval.
+[?] Fri Nov 18 02:02:54 CST [eg-cps-clsp-e01-h01: secd: secd.dns.server.timed.out:warning]: DNS server 167.68.21.254 did not respond to vserver = cpsprod-e0112 within timeout interval.
+[?] Fri Nov 18 02:02:54 CST [eg-cps-clsp-e01-h01: secd: secd.unexpectedFailure:debug]: vserver (cpsprod-e0112) Unexpected failure. Error: Lookup CIFS/NFSV4 account SID and translate to corresponding unix name procedure failed   [2002 ms] Connection to 167.68.21.253 failed (Error: Operation timed out)   [  2002] Cannot connect to DNS server '167.68.21.253'   [  4003] Connection to 167.68.21.254 failed (Error: Operation timed out)   [  4003] Cannot connect to DNS server '167.68.21.254'   [  4004] Unable to use any of the provided DNS servers   [  4004] Could not find Windows SID 'S-1-5-21-1149247497-1642356119-618142746-512' **[  4004] FAILURE: SID lookup failed
+ 
+Per the above, it looks like the SVM had difficulty reaching either of the specified DNS servers, which then interfered with connecting to a Domain Controller and finding that SID.
+ 
+As a test, what happens if you try to run a manual translate request for that SID:
+Note: must be in diag mode
+diag secd authentication translate -vserver cpsprod-e0112 -sid S-1-5-21-1149247497-1642356119-618142746-512
+You might also try running the command against one or two other known account names:
+diag secd authentication translate -vserver cpsprod-e0112 -win-name domain\username
+ 
+If all the above attempts fail to return correct data, you might first try pinging the dns servers from the svm context:
+net ping -vserver cpsprod-e0112 -v true -destination 167.68.21.253
+ 
+If pinging to the servers is successful, there may be port blockage (firewall) for tcp/udp port 53.  A packet trace can be run to confirm this.
+
+===========================================
+
+eg-cps-clsp-e01::*> diag secd authentication translate -vserver cpsprod-e0112 -sid S-1-5-21-1149247497-1642356119-618142746-512
+ 
+Error: command failed: "node" is a required field
+ 
+eg-cps-clsp-e01::*>
+eg-cps-clsp-e01::*> diag secd authentication translate -node eg-cps-clsp-e01-l02 -vserver cpsprod-e0112 -sid S-1-5-21-1149247497-1642356119-618142746-512
+ECOM\Domain Admins (Domain group)
+ 
+ 
+eg-cps-clsp-e01::*>
+ 
+eg-cps-clsp-e01::*> net ping -vserver cpsprod-e0112 -v true -destination 167.68.21.253
+  (network ping)
+ 
+Error: invalid argument "-vserver"
+ 
+eg-cps-clsp-e01::*>
+ 
+eg-cps-clsp-e01::*> net ping -node eg-cps-clsp-e01-l02 -destination 167.68.21.253
+  (network ping)
+167.68.21.253 is alive
+ 
+eg-cps-clsp-e01::*>
+eg-cps-clsp-e01::*> net ping -node eg-cps-clsp-e01-l02 -destination 167.68.21.254
+  (network ping)
+167.68.21.254 is alive
