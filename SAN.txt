@@ -1,0 +1,14 @@
+New Storage Administration:
+
+1. Management Host Access Checks
+Pre-requisites to array configuration
+Access Requirements
+Initial Array Connectivity & Discovery
+VMAX3 Embedded Unisphere
+SYMCLI Access
+SYMCLI Command Functionality
+Standalone Unisphere for VMAX Version
+Standalone Unisphere for VMAX Access
+
+2. Hardware Checks
+Serial number,model,Number of Directors,Number of DA’s (total),Hostname,Asset ID,Service Processor IP Address:MMCS-1,MMCS-2,E-MGMT-1,E-MGMT-2,Number of FC front end ports,

@@ -1,0 +1,52 @@
+Vol move validation:
+-----------------------
+ssh eg-cps-clsp-e01 vol move start -vserver cpsprod-e0061 -volume cb0597_at_proviewtitleprode_snap -destination-aggregate aggr1_data_h01 -perform-validation-only true
+
+#Validation succeeded.
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+Action plan
+-----------
+
+1)start volume move one-by-one only
+2)check the status of volume move using "volume move show command" before starting the second command.
+3)After completion of volume move, check the hosting aggregate of the volume for confirmation using volume show -vserver <vserver_name> -volume <volume_name>
+4)After all the volume move completed, then start the migration of LIF.
+
+Source Node
+------------------
+eg-cps-clsp-e01-h03
+
+Target Node
+------------------
+eg-cps-clsp-e01-h01
+
+Vserver Involved:
+---------------------
+cpsprod-e0061
+
+commands to perform volume move and automatic cutover:(in diag mode)
+------------------------------------------------------
+ssh eg-cps-clsp-e01
+set diag
+ 
+volume move start -vserver cpsprod-e0061 -volume cb0597_at_proviewtitleprode_snap -destination-aggregate aggr1_data_h01 -cutover-window 45  -cutover-attempts 3 -cutover-action defer_on_failure -perform-validation-only false -foreground false -bypass-throttling true
+volume move start -vserver cpsprod-e0061 -volume cpsprod_e0061_root -destination-aggregate aggr1_data_h01 -cutover-window 45  -cutover-attempts 3 -cutover-action defer_on_failure -perform-validation-only false -foreground false -bypass-throttling true
+
+command to check the volume move status:  (percent-complete - shows us how much percent of data copy completed)
+-----------------------------------------------------------------------------------------------------
+
+ssh eg-cps-clsp-e01 volume move show -vserver cpsprod-e0061
+
+To migrate LIF & changing the home node/port:
+--------------------------------------------
+ssh eg-cps-clsp-e01 net int show  -vserver cpsprod-e0061
+ssh eg-cps-clsp-e01 net int migrate -vserver cpsprod-e0061 -lif cpsprod-e0061-lif01 -destination-node eg-cps-clsp-e01-h01 -destination-port a0a-2053
+ssh eg-cps-clsp-e01 net int modify -vserver cpsprod-e0061 -lif cpsprod-e0061-lif01 -home-node eg-cps-clsp-e01-h01 -home-port a0a-2053
+ssh eg-cps-clsp-e01 net int show  -vserver cpsprod-e0061
+
+post Checks
+==============================
+
+ssh eg-cps-clsp-e01 vserver show -vserver cpsprod-e0061 -fields aggregate
+ssh eg-cps-clsp-e01 net int show -vserver cpsprod-e0061

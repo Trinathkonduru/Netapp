@@ -1,0 +1,23 @@
+ssh sy-cis-clsp-x01 volume size -vserver cisprod-z0022 -volume cb0000_wi_fdlwfrmsprod3_1_tsys_nosnap -new-size 44g
+ssh sy-cis-clsp-x01 volume modify -vserver cisprod-z0022 -volume cb0000_wi_fdlwfrmsprod3_1_tsys_nosnap -percent-snapshot-space 50
+ssh sy-cis-clsp-x01 volume show -vserver cisprod-z0022 -volume cb0000_wi_fdlwfrmsprod3_1_tsys_nosnap -fields size,percent-snapshot-space
+ssh sy-cis-clsp-x03 vserver peer create -vserver cisprod-z0018 -peer-vserver cisprod-z0022 -peer-cluster sy-cis-clsp-x01 -applications snapmirror
+ssh sy-cis-clsp-x01 vserver peer accept -vserver cisprod-z0022 -peer-vserver cisprod-z0018
+
+
+ssh sy-cis-clsp-x03 volume create -vserver cisprod-z0018 -volume aiid200337_p_i_dbi_chg1151133_01_snap45 -type DP -size 128.6g -percent-snapshot-space 50 -security-style unix -aggregate aggr1_data_s02 -language en_US -snapshot-policy none -space-guarantee none
+ssh sy-cis-clsp-x03 volume create -vserver cisprod-z0018 -volume aiid200337_p_i_dbi_chg1151133_02_snap45 -type DP -size 22g -percent-snapshot-space 50 -security-style unix -aggregate aggr1_data_s02 -language en_US -snapshot-policy none -space-guarantee none
+ssh sy-cis-clsp-x03 volume create -vserver cisprod-z0018 -volume aiid200337_p_i_dbi_chg1151133_03_nosnap -type DP -size 44g -percent-snapshot-space 50 -security-style unix -aggregate aggr1_data_s02 -language en_US -snapshot-policy none -space-guarantee none
+
+
+ssh sy-cis-clsp-x03 snapmirror create -source-path cisprod-z0022:cb0000_wi_fdlwfrmsprod3_1_usr_snap -destination-path cisprod-z0018:aiid200337_p_i_dbi_chg1151133_01_snap45 -type DP -schedule DP_1
+ssh sy-cis-clsp-x03 snapmirror create -source-path cisprod-z0022:cb0000_wi_fdlwfrmsprod3_1_info_snap -destination-path cisprod-z0018:aiid200337_p_i_dbi_chg1151133_02_snap45 -type DP -schedule DP_1
+ssh sy-cis-clsp-x03 snapmirror create -source-path cisprod-z0022:cb0000_wi_fdlwfrmsprod3_1_tsys_nosnap -destination-path cisprod-z0018:aiid200337_p_i_dbi_chg1151133_03_nosnap -type DP -schedule DP_1
+ssh sy-cis-clsp-x03 snapmirror show -vserver cisprod-z0018 -fields state,status,total-progress,lag-time
+
+
+ssh sy-cis-clsp-x03 snapmirror initialize -destination-path cisprod-z0018:aiid200337_p_i_dbi_chg1151133_01_snap45
+ssh sy-cis-clsp-x03 snapmirror initialize -destination-path cisprod-z0018:aiid200337_p_i_dbi_chg1151133_02_snap45
+ssh sy-cis-clsp-x03 snapmirror initialize -destination-path cisprod-z0018:aiid200337_p_i_dbi_chg1151133_03_nosnap
+
+ssh sy-cis-clsp-x03 snapmirror show -vserver cisprod-z0018 -fields state,status,total-progress,lag-time

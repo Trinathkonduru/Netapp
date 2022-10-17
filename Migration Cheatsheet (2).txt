@@ -1,0 +1,1204 @@
+This cheat sheet is for a vserver containing 2 ISCSI SNAP volume and 1 ISCSI NOSNAP volume.
+This can be used to cover MSSQL or STD volumes.
+Do not use this template if it does not apply to your migration.
+============================================
+Created by: Nagendra Babu K
+Reviewed by: 
+Implemented by: 
+
+migration_info_from_storage_summary_sheet
+
+SourceFiler	         SourceVserver	             SourceVolume	             DestinationFiler	DestVserver	                DestVolume
+sy-cis-clsp-x01-h02	cisclnt-z0032	cb0000_wi_legalcvmailppe1_usr_snap	    sy-cis-clsp-x03-s02	cisclnt-z0025	aiid200112_u_i_dbi_chg1151133_01_snap07
+sy-cis-clsp-x01-h02	cisclnt-z0032	cb0000_wi_legalcvmailppe1_tsys_nosnap	sy-cis-clsp-x03-s02	cisclnt-z0025	aiid200112_u_i_dbi_chg1151133_03_nosnap
+sy-cis-clsp-x01-h02	cisclnt-z0032	cb0000_wi_legalcvmailppe1_info_snap	    sy-cis-clsp-x03-s02	cisclnt-z0025	aiid200112_u_i_dbi_chg1151133_02_snap07
+
+For Windows team iscsi config:
+LIF01 10.234.84.29
+LIF02 10.234.84.30
+
+BKP LIF01 10.234.87.96
+BKP LIF02 10.234.87.99
+
+Old SnapCenter: https://c452uwy.mgmt.tlrg.com:8146/
+New SnapCenter: https://c452uwy.mgmt.tlrg.com:8146/
+
+C066WGJAUCVS1
+
+Primary filer path:
+Old Archlog Primary: \\cismssql-z0003.int.thomsonreuters.com\c066wgjaucvs1_sqlarch$\C066WGJAUCVS1
+New Archlog Primary:  \\cismssql-z0004.int.thomsonreuters.com\c066wgjaucvs1_sqlarch$\C066WGJAUCVS1
+
+Secondary filer path:
+Old Archlog Secondary: \\cisclnt-z0027.int.thomsonreuters.com\dba_mssql$\r7\C066WGJAUCVS1
+New Archlog Secondary:  \\cismssql-z0005.int.thomsonreuters.com\dba_mssql$\r7\C066WGJAUCVS1
+
+# Perform a find and replace on the following items.
+# src_cdot_primary refers to the CDOT primary filer which is the source system in the SnapMirror transfer.
+# dst_cdot_primary refers to the CDOT primary filer which is the target system in the SnapMirror transfer.
+
+sy-cis-clsp-x01
+cisclnt-z0032
+cb0000_wi_legalcvmailppe1_usr_snap
+cb0000_wi_legalcvmailppe1_info_snap
+cb0000_wi_legalcvmailppe1_tsys_nosnap
+cisclnt_z0032_root (if vserver reclaim)
+
+# If more than one initiator, update step 3 with comma-delimited list like this: iqn.serverFQDN1,iqn.serverFQDN2
+c066wgjaucvs1.intqa.thomsonreuters.com
+
+sy-cis-clsp-x03
+cisclnt-z0025
+aiid200112_u_i_dbi_chg1151133_01_snap07
+427.2g (old size or right-sizing, i.e. 150g; this is also used for backup vol size)
+1281.6g (multiply size by 3, if very large try to avoid going over 10t)
+
+aiid200112_u_i_dbi_chg1151133_02_snap07
+27g (old size or right-sizing, i.e. 150g; this is also used for backup vol size)
+81g (multiply size by 3, if very large try to avoid going over 10t)
+
+aiid200112_u_i_dbi_chg1151133_03_nosnap
+53g (old size before adding snap reserve or right-sizing, i.e. 150g)
+
+ssh sy-cis-clsp-x01 snapmirror list-destinations -source-path cisclnt-z0032:cb0000_wi_legalcvmailppe1_usr_snap
+cis-ss-clbk-x02
+sv_07_cb0000_wi_legalcvmailppe1_usr_snap
+cdlist cis-ss-clbk-x02
+sy-cis-clbk-x02
+
+ssh sy-cis-clsp-x01 snapmirror list-destinations -source-path cisclnt-z0032:cb0000_wi_legalcvmailppe1_info_snap
+sv_07_cb0000_wi_legalcvmailppe1_info_snap
+
+sy-cis-clbk-x01
+ssh sy-cis-clbk-x01 vserver show -fields comment | grep ISCSI
+ssh sy-cis-clbk-x01 df -A -g | egrep -v "root|snapshot"
+cis-ss-clbk-x09
+aggr1_data_b01 (i.e. aggr1_data_b01)
+# Check vol language. Replace en_US with other language when applicable.
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields language
+en_US (C, en_US, en.UTF-8, etc.)
+# Select policy based on volume type and retention
+XDP_iscsi_7 (_std_ vol policies: XDP_iscsi_7_1, XDP_iscsi_14_1, XDP_iscsi_45_1) (_dbi_ vol policies: XDP_iscsi_7, XDP_iscsi_14, XDP_iscsi_45)
+# SnapCenter manages snap creation, only need to set vault hour
+00 (23, 00, 01, 02, 03)
+
+EXP_2022OCT09_CHG1151123_Sydtechrefresh (Primary expiration 2-weeks from cutover)
+EXP_2022OCT02_CHG1151123_Sydtechrefresh (Backup expiration 7, 14, or 45 days from cutover)
+10000iops ("INF" for dedicated, "10000iops" for shared AFF, "6000iops" for shared non-AFF)
+# Check for iscsi and iscsisv users, add if missing
+ssh sy-cis-clsp-x03 security login show -vserver cisclnt-z0025
+
+sy-cis-clsp-x02
+cismssql-z0003
+cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap
+EXP_2022OCT02_CHG1151123_Sydtechrefresh (Archlog expiration 7, 14, or 45 days from cutover)
+
+# Collect lun mapping info from source and manually update step 12 with the lun path/lun id pairings
+ssh sy-cis-clsp-x01 lun mapping show -vserver cisclnt-z0032 | awk '{print $2,$4}'
+ssh sy-cis-clsp-x03 lun show -vserver cisclnt-z0025 | awk '{print $2}'
+
+============================================
+
+Data collection for reference:
+
+ssh sy-cis-clsp-x01 vserver show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 vserver show -vserver cisclnt-z0032 -fields allowed-protocols
+ssh sy-cis-clsp-x01 network interface show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 network interface show -vserver cisclnt-z0032 -fields data-protocol
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_usr_snap
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_info_snap
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_tsys_nosnap
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -fields policy,snapshot-policy,qos-policy-group
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -fields junction-path,node,aggregate,language
+ssh sy-cis-clsp-x01 'set -units gb; volume show -vserver cisclnt-z0032 -fields size,percent-snapshot-space'
+ssh sy-cis-clsp-x01 df -g -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 qtree show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 qtree show -vserver cisclnt-z0032 -fields security-style,unix-permissions,export-policy
+ssh sy-cis-clsp-x01 quota show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 'set -units gb; quota policy rule show -vserver cisclnt-z0032 -fields disk-limit'
+ssh sy-cis-clsp-x01 'set -units gb; quota report -vserver cisclnt-z0032'
+ssh sy-cis-clsp-x01 snapshot policy show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 job schedule cron show | egrep -i "cb0000_wi_legalcvmailppe1_usr_snap|cb0000_wi_legalcvmailppe1_info_snap|cb0000_wi_legalcvmailppe1_tsys_nosnap"
+ssh sy-cis-clsp-x01 qos policy-group show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 export-policy show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 export-policy rule show -vserver cisclnt-z0032 -fields protocol,clientmatch,rorule,rwrule,superuser
+ssh sy-cis-clsp-x01 cifs show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 cifs share show -vserver cisclnt-z0032 -instance
+ssh sy-cis-clsp-x01 cifs users-and-groups local-group show-members -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 cifs session show -vserver cisclnt-z0032 -fields address,windows-user,unix-user | grep -iv svcAvNas
+ssh sy-cis-clsp-x01 igroup show -vserver cisclnt-z0032 -instance
+ssh sy-cis-clsp-x01 lun show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 lun mapping show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 snapshot show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 snapmirror show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 snapmirror list-destinations -source-vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 vserver peer show -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 vserver peer transition show -local-vserver cisclnt-z0032
+
+ssh sy-cis-clbk-x02 snapmirror show -destination-path cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_usr_snap -fields schedule,policy
+ssh sy-cis-clbk-x02 snapmirror show -destination-path cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_info_snap -fields schedule,policy
+
+Run the above commands and paste the output here.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 vserver show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:05:03
+
+                                    Vserver: cisclnt-z0032
+                               Vserver Type: data
+                            Vserver Subtype: default
+                               Vserver UUID: df938554-cda2-11ea-948d-00a09897cbeb
+                                Root Volume: cisclnt_z0032_root
+                                  Aggregate: aggr1_data_h02_FULL
+                                 NIS Domain: -
+                 Root Volume Security Style: unix
+                                LDAP Client: -
+               Default Volume Language Code: en_US
+                            Snapshot Policy: default
+                              Data Services: data-iscsi, management-ssh,
+                                             management-https
+                                    Comment:
+                               Quota Policy: default
+                List of Aggregates Assigned: aggr1_data_h02_FULL
+ Limit on Maximum Number of Volumes allowed: unlimited
+                        Vserver Admin State: running
+                  Vserver Operational State: running
+   Vserver Operational State Stopped Reason: -
+                          Allowed Protocols: iscsi
+                       Disallowed Protocols: nfs, cifs, fcp, ndmp
+            Is Vserver with Infinite Volume: false
+                           QoS Policy Group: -
+                        Caching Policy Name: -
+                                Config Lock: false
+                               IPspace Name: Default
+                         Foreground Process: -
+                    Logical Space Reporting: false
+                  Logical Space Enforcement: false
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 vserver show -vserver cisclnt-z0032 -fields allowed-protocols
+
+Last login time: 9/23/2022 17:05:22
+vserver       allowed-protocols
+------------- -----------------
+cisclnt-z0032 iscsi
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 network interface show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:05:27
+            Logical    Status     Network            Current       Current Is
+Vserver     Interface  Admin/Oper Address/Mask       Node          Port    Home
+----------- ---------- ---------- ------------------ ------------- ------- ----
+cisclnt-z0032
+            cisclnt-z0032-lif01 up/up 10.234.84.23/25 sy-cis-clsp-x01-h02 a0a-2005 true
+            cisclnt-z0032-lif02 up/up 10.234.84.24/25 sy-cis-clsp-x01-h01 a0a-2005 true
+            cisclnt-z0032-mgmt-lif01 up/up 10.234.84.22/25 sy-cis-clsp-x01-h02 a0a-2005 true
+3 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 network interface show -vserver cisclnt-z0032 -fields data-protocol
+
+Last login time: 9/23/2022 17:05:33
+vserver       lif                 data-protocol
+------------- ------------------- -------------
+cisclnt-z0032 cisclnt-z0032-lif01 iscsi
+cisclnt-z0032 cisclnt-z0032-lif02 iscsi
+cisclnt-z0032 cisclnt-z0032-mgmt-lif01 none
+3 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:05:38
+Vserver   Volume       Aggregate    State      Type       Size  Available Used%
+--------- ------------ ------------ ---------- ---- ---------- ---------- -----
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap aggr1_data_h02_FULL online RW 27GB 3.42GB  74%
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap aggr1_data_h02_FULL online RW 106GB 2.77GB  94%
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap aggr1_data_h02_FULL online RW 427.2GB 12.66GB  94%
+cisclnt-z0032 cisclnt_z0032_root aggr1_data_h02_FULL online RW 1GB 916.9MB   0%
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_usr_snap
+
+Last login time: 9/23/2022 17:05:44
+
+                                   Vserver Name: cisclnt-z0032
+                                    Volume Name: cb0000_wi_legalcvmailppe1_usr_snap
+                                 Aggregate Name: aggr1_data_h02_FULL
+  List of Aggregates for FlexGroup Constituents: aggr1_data_h02_FULL
+                                Encryption Type: none
+               List of Nodes Hosting the Volume: sy-cis-clsp-x01-h02
+                                    Volume Size: 427.2GB
+                             Volume Data Set ID: 1354
+                      Volume Master Data Set ID: 2161895419
+                                   Volume State: online
+                                   Volume Style: flex
+                          Extended Volume Style: flexvol
+                        FlexCache Endpoint Type: none
+                         Is Cluster-Mode Volume: true
+                          Is Constituent Volume: false
+                                  Export Policy: default
+                                        User ID: 0
+                                       Group ID: 0
+                                 Security Style: unix
+                               UNIX Permissions: ---rwxr-xr-x
+                                  Junction Path: -
+                           Junction Path Source: -
+                                Junction Active: -
+                         Junction Parent Volume: -
+                                        Comment: AIID200112,unknown,unknown
+                                 Available Size: 12.66GB
+                                Filesystem Size: 427.2GB
+                        Total User-Visible Size: 213.6GB
+                                      Used Size: 200.9GB
+                                Used Percentage: 94%
+           Volume Nearly Full Threshold Percent: 95%
+                  Volume Full Threshold Percent: 98%
+                               Maximum Autosize: 506.4GB
+                               Minimum Autosize: 420.0GB
+             Autosize Grow Threshold Percentage: 95%
+           Autosize Shrink Threshold Percentage: 50%
+                                  Autosize Mode: grow
+            Total Files (for user-visible data): 13915325
+             Files Used (for user-visible data): 107
+                      Space Guarantee in Effect: true
+                            Space SLO in Effect: true
+                                      Space SLO: none
+                          Space Guarantee Style: none
+                             Fractional Reserve: 0%
+                                    Volume Type: RW
+              Snapshot Directory Access Enabled: true
+             Space Reserved for Snapshot Copies: 50%
+                          Snapshot Reserve Used: 3%
+                                Snapshot Policy: none
+                                  Creation Time: Fri Jul 24 22:05:53 2020
+                                       Language: en_US
+                                   Clone Volume: false
+                                      Node name: sy-cis-clsp-x01-h02
+                      Clone Parent Vserver Name: -
+                        FlexClone Parent Volume: -
+                                  NVFAIL Option: on
+                          Volume's NVFAIL State: false
+        Force NVFAIL on MetroCluster Switchover: off
+                      Is File System Size Fixed: false
+                     (DEPRECATED)-Extent Option: off
+                  Reserved Space for Overwrites: 0B
+              Primary Space Management Strategy: volume_grow
+                       Read Reallocation Option: off
+    Naming Scheme for Automatic Snapshot Copies: create_time
+               Inconsistency in the File System: false
+                   Is Volume Quiesced (On-Disk): false
+                 Is Volume Quiesced (In-Memory): false
+      Volume Contains Shared or Compressed Data: false
+              Space Saved by Storage Efficiency: 0B
+         Percentage Saved by Storage Efficiency: 0%
+                   Space Saved by Deduplication: 0B
+              Percentage Saved by Deduplication: 0%
+                  Space Shared by Deduplication: 0B
+                     Space Saved by Compression: 0B
+          Percentage Space Saved by Compression: 0%
+            Volume Size Used by Snapshot Copies: 6.96GB
+                                     Block Type: 64-bit
+                               Is Volume Moving: false
+                 Flash Pool Caching Eligibility: read-write
+  Flash Pool Write Caching Ineligibility Reason: -
+                        Constituent Volume Role: -
+                          QoS Policy Group Name: cb0000_wi_legalcvmailppe1_usr_snap
+                 QoS Adaptive Policy Group Name: -
+                            Caching Policy Name: -
+                Is Volume Move in Cutover Phase: false
+        Number of Snapshot Copies in the Volume: 17
+VBN_BAD may be present in the active filesystem: false
+                Is Volume on a hybrid aggregate: false
+                       Total Physical Used Size: 13.44GB
+                       Physical Used Percentage: 3%
+                          Is Volume a FlexGroup: false
+                                  SnapLock Type: non-snaplock
+                          Vserver DR Protection: -
+                              Enable Encryption: false
+                            Is Volume Encrypted: false
+                        Volume Encryption State: none
+                              Encryption Key ID:
+                                    Application: -
+                  Is Fenced for Protocol Access: false
+                    Protocol Access Fence Owner: -
+                                Is SIDL enabled: off
+                          Over Provisioned Size: 0B
+                Available Snapshot Reserve Size: 206.6GB
+                              Logical Used Size: 200.9GB
+                        Logical Used Percentage: 94%
+                         Logical Available Size: -
+         Logical Size Used by Active Filesystem: 200.9GB
+             Logical Size Used by All Snapshots: 0B
+                        Logical Space Reporting: false
+                      Logical Space Enforcement: false
+                          Volume Tiering Policy: none
+            Performance Tier Inactive User Data: -
+    Performance Tier Inactive User Data Percent: -
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_info_snap
+
+Last login time: 9/23/2022 17:05:50
+
+                                   Vserver Name: cisclnt-z0032
+                                    Volume Name: cb0000_wi_legalcvmailppe1_info_snap
+                                 Aggregate Name: aggr1_data_h02_FULL
+  List of Aggregates for FlexGroup Constituents: aggr1_data_h02_FULL
+                                Encryption Type: none
+               List of Nodes Hosting the Volume: sy-cis-clsp-x01-h02
+                                    Volume Size: 27GB
+                             Volume Data Set ID: 1356
+                      Volume Master Data Set ID: 2161895421
+                                   Volume State: online
+                                   Volume Style: flex
+                          Extended Volume Style: flexvol
+                        FlexCache Endpoint Type: none
+                         Is Cluster-Mode Volume: true
+                          Is Constituent Volume: false
+                                  Export Policy: default
+                                        User ID: 0
+                                       Group ID: 0
+                                 Security Style: unix
+                               UNIX Permissions: ---rwxr-xr-x
+                                  Junction Path: -
+                           Junction Path Source: -
+                                Junction Active: -
+                         Junction Parent Volume: -
+                                        Comment: AIID200112,unknown,unknown
+                                 Available Size: 3.42GB
+                                Filesystem Size: 27GB
+                        Total User-Visible Size: 13.50GB
+                                      Used Size: 10.08GB
+                                Used Percentage: 74%
+           Volume Nearly Full Threshold Percent: 95%
+                  Volume Full Threshold Percent: 98%
+                               Maximum Autosize: 32.40GB
+                               Minimum Autosize: 27GB
+             Autosize Grow Threshold Percentage: 95%
+           Autosize Shrink Threshold Percentage: 50%
+                                  Autosize Mode: grow
+            Total Files (for user-visible data): 840494
+             Files Used (for user-visible data): 102
+                      Space Guarantee in Effect: true
+                            Space SLO in Effect: true
+                                      Space SLO: none
+                          Space Guarantee Style: none
+                             Fractional Reserve: 0%
+                                    Volume Type: RW
+              Snapshot Directory Access Enabled: true
+             Space Reserved for Snapshot Copies: 50%
+                          Snapshot Reserve Used: 19%
+                                Snapshot Policy: none
+                                  Creation Time: Fri Jul 24 22:06:16 2020
+                                       Language: en_US
+                                   Clone Volume: false
+                                      Node name: sy-cis-clsp-x01-h02
+                      Clone Parent Vserver Name: -
+                        FlexClone Parent Volume: -
+                                  NVFAIL Option: on
+                          Volume's NVFAIL State: false
+        Force NVFAIL on MetroCluster Switchover: off
+                      Is File System Size Fixed: false
+                     (DEPRECATED)-Extent Option: off
+                  Reserved Space for Overwrites: 0B
+              Primary Space Management Strategy: volume_grow
+                       Read Reallocation Option: off
+    Naming Scheme for Automatic Snapshot Copies: create_time
+               Inconsistency in the File System: false
+                   Is Volume Quiesced (On-Disk): false
+                 Is Volume Quiesced (In-Memory): false
+      Volume Contains Shared or Compressed Data: false
+              Space Saved by Storage Efficiency: 0B
+         Percentage Saved by Storage Efficiency: 0%
+                   Space Saved by Deduplication: 0B
+              Percentage Saved by Deduplication: 0%
+                  Space Shared by Deduplication: 0B
+                     Space Saved by Compression: 0B
+          Percentage Space Saved by Compression: 0%
+            Volume Size Used by Snapshot Copies: 2.56GB
+                                     Block Type: 64-bit
+                               Is Volume Moving: false
+                 Flash Pool Caching Eligibility: read-write
+  Flash Pool Write Caching Ineligibility Reason: -
+                        Constituent Volume Role: -
+                          QoS Policy Group Name: cb0000_wi_legalcvmailppe1_info_snap
+                 QoS Adaptive Policy Group Name: -
+                            Caching Policy Name: -
+                Is Volume Move in Cutover Phase: false
+        Number of Snapshot Copies in the Volume: 17
+VBN_BAD may be present in the active filesystem: false
+                Is Volume on a hybrid aggregate: false
+                       Total Physical Used Size: 7.62GB
+                       Physical Used Percentage: 28%
+                          Is Volume a FlexGroup: false
+                                  SnapLock Type: non-snaplock
+                          Vserver DR Protection: -
+                              Enable Encryption: false
+                            Is Volume Encrypted: false
+                        Volume Encryption State: none
+                              Encryption Key ID:
+                                    Application: -
+                  Is Fenced for Protocol Access: false
+                    Protocol Access Fence Owner: -
+                                Is SIDL enabled: off
+                          Over Provisioned Size: 0B
+                Available Snapshot Reserve Size: 10.94GB
+                              Logical Used Size: 10.08GB
+                        Logical Used Percentage: 75%
+                         Logical Available Size: -
+         Logical Size Used by Active Filesystem: 10.08GB
+             Logical Size Used by All Snapshots: 0B
+                        Logical Space Reporting: false
+                      Logical Space Enforcement: false
+                          Volume Tiering Policy: none
+            Performance Tier Inactive User Data: -
+    Performance Tier Inactive User Data Percent: -
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_tsys_nosnap
+
+Last login time: 9/23/2022 17:05:55
+
+                                   Vserver Name: cisclnt-z0032
+                                    Volume Name: cb0000_wi_legalcvmailppe1_tsys_nosnap
+                                 Aggregate Name: aggr1_data_h02_FULL
+  List of Aggregates for FlexGroup Constituents: aggr1_data_h02_FULL
+                                Encryption Type: none
+               List of Nodes Hosting the Volume: sy-cis-clsp-x01-h02
+                                    Volume Size: 106GB
+                             Volume Data Set ID: 1355
+                      Volume Master Data Set ID: 2161895420
+                                   Volume State: online
+                                   Volume Style: flex
+                          Extended Volume Style: flexvol
+                        FlexCache Endpoint Type: none
+                         Is Cluster-Mode Volume: true
+                          Is Constituent Volume: false
+                                  Export Policy: default
+                                        User ID: 0
+                                       Group ID: 0
+                                 Security Style: unix
+                               UNIX Permissions: ---rwxr-xr-x
+                                  Junction Path: -
+                           Junction Path Source: -
+                                Junction Active: -
+                         Junction Parent Volume: -
+                                        Comment: AIID200112,unknown,unknown
+                                 Available Size: 2.77GB
+                                Filesystem Size: 106GB
+                        Total User-Visible Size: 53GB
+                                      Used Size: 50.23GB
+                                Used Percentage: 94%
+           Volume Nearly Full Threshold Percent: 95%
+                  Volume Full Threshold Percent: 98%
+                               Maximum Autosize: 127.2GB
+                               Minimum Autosize: 106GB
+             Autosize Grow Threshold Percentage: 95%
+           Autosize Shrink Threshold Percentage: 50%
+                                  Autosize Mode: grow
+            Total Files (for user-visible data): 3299730
+             Files Used (for user-visible data): 102
+                      Space Guarantee in Effect: true
+                            Space SLO in Effect: true
+                                      Space SLO: none
+                          Space Guarantee Style: none
+                             Fractional Reserve: 0%
+                                    Volume Type: RW
+              Snapshot Directory Access Enabled: true
+             Space Reserved for Snapshot Copies: 50%
+                          Snapshot Reserve Used: 0%
+                                Snapshot Policy: none
+                                  Creation Time: Fri Jul 24 22:06:05 2020
+                                       Language: en_US
+                                   Clone Volume: false
+                                      Node name: sy-cis-clsp-x01-h02
+                      Clone Parent Vserver Name: -
+                        FlexClone Parent Volume: -
+                                  NVFAIL Option: on
+                          Volume's NVFAIL State: false
+        Force NVFAIL on MetroCluster Switchover: off
+                      Is File System Size Fixed: false
+                     (DEPRECATED)-Extent Option: off
+                  Reserved Space for Overwrites: 0B
+              Primary Space Management Strategy: volume_grow
+                       Read Reallocation Option: off
+    Naming Scheme for Automatic Snapshot Copies: create_time
+               Inconsistency in the File System: false
+                   Is Volume Quiesced (On-Disk): false
+                 Is Volume Quiesced (In-Memory): false
+      Volume Contains Shared or Compressed Data: false
+              Space Saved by Storage Efficiency: 0B
+         Percentage Saved by Storage Efficiency: 0%
+                   Space Saved by Deduplication: 0B
+              Percentage Saved by Deduplication: 0%
+                  Space Shared by Deduplication: 0B
+                     Space Saved by Compression: 0B
+          Percentage Space Saved by Compression: 0%
+            Volume Size Used by Snapshot Copies: 268KB
+                                     Block Type: 64-bit
+                               Is Volume Moving: false
+                 Flash Pool Caching Eligibility: read-write
+  Flash Pool Write Caching Ineligibility Reason: -
+                        Constituent Volume Role: -
+                          QoS Policy Group Name: cb0000_wi_legalcvmailppe1_tsys_nosnap
+                 QoS Adaptive Policy Group Name: -
+                            Caching Policy Name: -
+                Is Volume Move in Cutover Phase: false
+        Number of Snapshot Copies in the Volume: 1
+VBN_BAD may be present in the active filesystem: false
+                Is Volume on a hybrid aggregate: false
+                       Total Physical Used Size: 1.15GB
+                       Physical Used Percentage: 1%
+                          Is Volume a FlexGroup: false
+                                  SnapLock Type: non-snaplock
+                          Vserver DR Protection: -
+                              Enable Encryption: false
+                            Is Volume Encrypted: false
+                        Volume Encryption State: none
+                              Encryption Key ID:
+                                    Application: -
+                  Is Fenced for Protocol Access: false
+                    Protocol Access Fence Owner: -
+                                Is SIDL enabled: off
+                          Over Provisioned Size: 0B
+                Available Snapshot Reserve Size: 53.00GB
+                              Logical Used Size: 50.23GB
+                        Logical Used Percentage: 95%
+                         Logical Available Size: -
+         Logical Size Used by Active Filesystem: 50.23GB
+             Logical Size Used by All Snapshots: 0B
+                        Logical Space Reporting: false
+                      Logical Space Enforcement: false
+                          Volume Tiering Policy: none
+            Performance Tier Inactive User Data: -
+    Performance Tier Inactive User Data Percent: -
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -fields policy,snapshot-policy,qos-policy-group
+
+Last login time: 9/23/2022 17:06:01
+vserver       volume                              policy  snapshot-policy qos-policy-group
+------------- ----------------------------------- ------- --------------- -----------------------------------
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap default none            cb0000_wi_legalcvmailppe1_info_snap
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap default none          cb0000_wi_legalcvmailppe1_tsys_nosnap
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap  default none            cb0000_wi_legalcvmailppe1_usr_snap
+cisclnt-z0032 cisclnt_z0032_root                  default default         -
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032 -fields junction-path,node,aggregate,language
+
+Last login time: 9/23/2022 17:06:07
+vserver       volume                              aggregate           junction-path language node
+------------- ----------------------------------- ------------------- ------------- -------- -------------------
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap aggr1_data_h02_FULL -             en_US    sy-cis-clsp-x01-h02
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap aggr1_data_h02_FULL -           en_US    sy-cis-clsp-x01-h02
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap  aggr1_data_h02_FULL -             en_US    sy-cis-clsp-x01-h02
+cisclnt-z0032 cisclnt_z0032_root                  aggr1_data_h02_FULL /             en_US    sy-cis-clsp-x01-h02
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 'set -units gb; volume show -vserver cisclnt-z0032 -fields size,percent-snapshot-space'
+
+Last login time: 9/23/2022 17:06:12
+
+vserver       volume                              size percent-snapshot-space
+------------- ----------------------------------- ---- ----------------------
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap 27GB 50%
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap 106GB 50%
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap  427GB 50%
+cisclnt-z0032 cisclnt_z0032_root                  1GB  10%
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 df -g -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:06:18
+Filesystem               total       used      avail capacity  Mounted on
+/vol/cb0000_wi_legalcvmailppe1_info_snap/ 13GB 10GB 3GB   74%  ---
+/vol/cb0000_wi_legalcvmailppe1_info_snap/.snapshot 13GB 2GB 10GB 19%  ---
+/vol/cb0000_wi_legalcvmailppe1_tsys_nosnap/ 53GB 50GB 2GB 94%  ---
+/vol/cb0000_wi_legalcvmailppe1_tsys_nosnap/.snapshot 53GB 0GB 52GB 0%  ---
+/vol/cb0000_wi_legalcvmailppe1_usr_snap/ 213GB 200GB 12GB 94%  ---
+/vol/cb0000_wi_legalcvmailppe1_usr_snap/.snapshot 213GB 6GB 206GB 3%  ---
+/vol/cisclnt_z0032_root/   0GB        0GB        0GB       0%  /
+/vol/cisclnt_z0032_root/.snapshot 0GB 0GB        0GB      22%  //.snapshot
+8 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 qtree show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:06:24
+Vserver    Volume        Qtree        Style        Oplocks   Status
+---------- ------------- ------------ ------------ --------- --------
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap "" unix enable normal
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap luns unix enable normal
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap "" unix enable normal
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap luns unix enable normal
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap "" unix enable normal
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap luns unix enable normal
+cisclnt-z0032 cisclnt_z0032_root ""   unix         enable    normal
+7 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 qtree show -vserver cisclnt-z0032 -fields security-style,unix-permissions,export-policy
+
+Last login time: 9/23/2022 17:06:29
+vserver       volume                              qtree security-style unix-permissions export-policy
+------------- ----------------------------------- ----- -------------- ---------------- -------------
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap ""    unix           ---rwxr-xr-x     default
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap luns  unix           ---rwxr-xr-x     default
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap ""  unix           ---rwxr-xr-x     default
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_tsys_nosnap luns unix          ---rwxr-xr-x     default
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap  ""    unix           ---rwxr-xr-x     default
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_usr_snap  luns  unix           ---rwxr-xr-x     default
+cisclnt-z0032 cisclnt_z0032_root                  ""    unix           ---rwxr-xr-x     default
+7 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 quota show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:06:35
+                                          Scan
+Vserver    Volume        State            Status
+---------  ------------  ---------------  ------
+cisclnt-z0032  cb0000_wi_legalcvmailppe1_info_snap  off  -
+cisclnt-z0032  cb0000_wi_legalcvmailppe1_tsys_nosnap  off  -
+cisclnt-z0032  cb0000_wi_legalcvmailppe1_usr_snap  off  -
+cisclnt-z0032  cisclnt_z0032_root  off         -
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 'set -units gb; quota policy rule show -vserver cisclnt-z0032 -fields disk-limit'
+
+Last login time: 9/23/2022 17:06:41
+
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 'set -units gb; quota report -vserver cisclnt-z0032'
+
+Last login time: 9/23/2022 17:06:46
+
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 snapshot policy show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:06:52
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 job schedule cron show | egrep -i "cb0000_wi_legalcvmailppe1_usr_snap|cb0000_wi_legalcvmailppe1_info_snap|cb0000_wi_legalcvmailppe1_tsys_nosnap"
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 qos policy-group show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:03
+Name             Vserver     Class        Wklds Throughput   Is Shared
+---------------- ----------- ------------ ----- ------------ ---------
+cb0000_wi_legalcvmailppe1_info_snap cisclnt-z0032 user-defined 1 0-6000IOPS true
+cb0000_wi_legalcvmailppe1_tsys_nosnap cisclnt-z0032 user-defined 1 0-6000IOPS true
+cb0000_wi_legalcvmailppe1_usr_snap cisclnt-z0032 user-defined 1 0-6000IOPS true
+3 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 export-policy show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:09
+Vserver          Policy Name
+---------------  -------------------
+cisclnt-z0032    default
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 export-policy rule show -vserver cisclnt-z0032 -fields protocol,clientmatch,rorule,rwrule,superuser
+
+Last login time: 9/23/2022 17:07:15
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 cifs show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:20
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 cifs share show -vserver cisclnt-z0032 -instance
+
+Last login time: 9/23/2022 17:07:26
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 cifs users-and-groups local-group show-members -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:31
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 cifs session show -vserver cisclnt-z0032 -fields address,windows-user,unix-user | grep -iv svcAvNas
+
+Last login time: 9/23/2022 17:07:37
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 igroup show -vserver cisclnt-z0032 -instance
+
+Last login time: 9/23/2022 17:07:43
+          Vserver Name: cisclnt-z0032
+           Igroup Name: ig-cisclnt-z0032-01
+              Protocol: iscsi
+               OS Type: windows
+Portset Binding Igroup: cisclnt-z0032-port-01
+           Igroup UUID: 7e572fb2-cda6-11ea-9536-00a098979a0f
+                  ALUA: true
+            Initiators: iqn.1991-05.com.microsoft:c066wgjaucvs1.intqa.thomsonreuters.com (logged in)
+
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 lun show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:48
+Vserver   Path                            State   Mapped   Type        Size
+--------- ------------------------------- ------- -------- -------- --------
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_info_snap/luns/snapinfo online mapped windows 10.00GB
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_tsys_nosnap/luns/tmpsys online mapped windows 50.01GB
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_usr_snap/luns/userdb online mapped windows 150.0GB
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_usr_snap/luns/userlog online mapped windows 50.01GB
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 lun mapping show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:54
+Vserver    Path                                      Igroup   LUN ID  Protocol
+---------- ----------------------------------------  -------  ------  --------
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_info_snap/luns/snapinfo  ig-cisclnt-z0032-01  2  iscsi
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_tsys_nosnap/luns/tmpsys  ig-cisclnt-z0032-01  3  iscsi
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_usr_snap/luns/userdb  ig-cisclnt-z0032-01  0  iscsi
+cisclnt-z0032 /vol/cb0000_wi_legalcvmailppe1_usr_snap/luns/userlog  ig-cisclnt-z0032-01  1  iscsi
+4 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 snapshot show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:07:59
+                                                                 ---Blocks---
+Vserver  Volume   Snapshot                                  Size Total% Used%
+-------- -------- ------------------------------------- -------- ------ -----
+cisclnt-z0032 cb0000_wi_legalcvmailppe1_info_snap
+                  sqlinfo__c066wgjaucvs1_05-08-2021_21.00.23 33.71MB 0%    1%
+                  sqlinfo__c066wgjaucvs1_05-09-2021_21.00.28 33.10MB 0%    1%
+                  sqlinfo__c066wgjaucvs1_05-10-2021_21.00.23 33.46MB 0%    1%
+                  sqlinfo__c066wgjaucvs1_05-11-2021_21.00.24 33.36MB 0%    1%
+                  sqlinfo__c066wgjaucvs1_05-12-2021_21.00.26 33.34MB 0%    1%
+                  sqlinfo__c066wgjaucvs1_05-13-2021_21.00.25 33.43MB 0%    1%
+                  sqlinfo__c066wgjaucvs1_05-14-2021_05.13.38 254.6MB 1%    5%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_05-14-2021_10.21.21.6106_1 396.4MB 1% 7%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_07-27-2021_09.54.50.5815_1 948.4MB 3% 15%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-16-2022_11.00.02.7735_1 116.1MB 0% 2%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-17-2022_11.00.02.9180_1 74.59MB 0% 1%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-18-2022_11.00.02.7323_1 137.7MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-19-2022_11.00.02.9448_1 107.7MB 0% 2%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-20-2022_11.00.03.0427_1 73.46MB 0% 1%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-21-2022_11.00.03.0437_1 137.6MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-22-2022_11.00.03.1832_1 97.65MB 0% 2%
+                  snapmirror.132d3257-3992-11ed-922a-d039ea4b348b_2163536566.2022-09-23_120000 76.74MB 0% 1%
+              cb0000_wi_legalcvmailppe1_tsys_nosnap
+                  snapmirror.132d3257-3992-11ed-922a-d039ea4b348b_2163536567.2022-09-23_120000 268KB 0% 0%
+              cb0000_wi_legalcvmailppe1_usr_snap
+                  sqlsnap__c066wgjaucvs1_05-08-2021_21.00.23 135.6MB 0%    2%
+                  sqlsnap__c066wgjaucvs1_05-09-2021_21.00.28 147.9MB 0%    2%
+                  sqlsnap__c066wgjaucvs1_05-10-2021_21.00.23 180.2MB 0%    3%
+                  sqlsnap__c066wgjaucvs1_05-11-2021_21.00.24 147.9MB 0%    2%
+                  sqlsnap__c066wgjaucvs1_05-12-2021_21.00.26 183.2MB 0%    3%
+                  sqlsnap__c066wgjaucvs1_05-13-2021_21.00.25 86.79MB 0%    1%
+                  sqlsnap__c066wgjaucvs1_05-14-2021_05.13.38 78.42MB 0%    1%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_05-14-2021_10.21.21.6106_1 2.08GB 0% 24%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_07-27-2021_09.54.50.5815_1 2.53GB 1% 28%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-16-2022_11.00.02.7735_1 202MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-17-2022_11.00.02.9180_1 200.8MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-18-2022_11.00.02.7323_1 204.6MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-19-2022_11.00.02.9448_1 205.8MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-20-2022_11.00.03.0427_1 208.3MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-21-2022_11.00.03.0437_1 212.0MB 0% 3%
+                  1507_c066wgjaucvs1_SQL_c066wgjaucvs1_09-22-2022_11.00.03.1832_1 211.3MB 0% 3%
+                  snapmirror.132d3257-3992-11ed-922a-d039ea4b348b_2163536565.2022-09-23_120000 652KB 0% 0%
+              cisclnt_z0032_root
+                  weekly.2022-09-11_0015                  9.49MB     1%   67%
+                  weekly.2022-09-18_0015                   212KB     0%    4%
+                  daily.2022-09-22_0010                  12.22MB     1%   72%
+                  daily.2022-09-23_0010                    212KB     0%    4%
+                  hourly.2022-09-23_1205                   156KB     0%    3%
+                  hourly.2022-09-23_1305                   160KB     0%    3%
+                  hourly.2022-09-23_1405                   156KB     0%    3%
+                  hourly.2022-09-23_1505                   148KB     0%    3%
+                  hourly.2022-09-23_1605                   156KB     0%    3%
+                  hourly.2022-09-23_1705                   148KB     0%    3%
+45 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 snapmirror show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:08:05
+There are no entries matching your query.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 snapmirror list-destinations -source-vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:08:10
+                                                  Progress
+Source             Destination         Transfer   Last         Relationship
+Path         Type  Path         Status Progress   Updated      Id
+----------- ----- ------------ ------- --------- ------------ ---------------
+cisclnt-z0032:cb0000_wi_legalcvmailppe1_info_snap XDP cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_info_snap Idle - - 42c9b8ac-cdaa-11ea-8bba-00a0989723e1
+                                                      cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07 Idle - - 7122a136-3a40-11ed-922a-d039ea4b348b
+cisclnt-z0032:cb0000_wi_legalcvmailppe1_tsys_nosnap XDP cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_03_nosnap Idle - - 749c24e4-3a40-11ed-922a-d039ea4b348b
+cisclnt-z0032:cb0000_wi_legalcvmailppe1_usr_snap XDP cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_usr_snap Idle - - 428d0e9c-cdaa-11ea-8bba-00a0989723e1
+                                                     cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07 Idle - - 6da96924-3a40-11ed-922a-d039ea4b348b
+5 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 vserver peer show -vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:08:16
+            Peer        Peer                           Peering        Remote
+Vserver     Vserver     State        Peer Cluster      Applications   Vserver
+----------- ----------- ------------ ----------------- -------------- ---------
+cisclnt-z0032 cis-ss-clbk-x02 peered sy-cis-clbk-x02   snapmirror     cis-ss-clbk-x02
+cisclnt-z0032 cisclnt-z0025 peered   sy-cis-clsp-x03   snapmirror     cisclnt-z0025
+2 entries were displayed.
+
+m6031020@c152mad:~> ssh sy-cis-clsp-x01 vserver peer transition show -local-vserver cisclnt-z0032
+
+Last login time: 9/23/2022 17:08:22
+There are no entries matching your query.
+
+m6031020@c152mad:~>
+m6031020@c152mad:~> ssh sy-cis-clbk-x02 snapmirror show -destination-path cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_usr_snap -fields schedule,policy
+
+Last login time: 9/23/2022 16:27:27
+source-path                                      destination-path                                         schedule policy
+------------------------------------------------ -------------------------------------------------------- -------- -----------
+cisclnt-z0032:cb0000_wi_legalcvmailppe1_usr_snap cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_usr_snap xdp_0    XDP_iscsi_7
+
+m6031020@c152mad:~> ssh sy-cis-clbk-x02 snapmirror show -destination-path cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_info_snap -fields schedule,policy
+
+Last login time: 9/23/2022 17:08:33
+source-path                                       destination-path                                          schedule policy
+------------------------------------------------- --------------------------------------------------------- -------- -----------
+cisclnt-z0032:cb0000_wi_legalcvmailppe1_info_snap cis-ss-clbk-x02:sv_07_cb0000_wi_legalcvmailppe1_info_snap xdp_0    XDP_iscsi_7
+
+
+****************************************
+****************************************
+****************************************
+NOTE: Skip items which are #commented out they are either not required or already completed
+****************************************
+****************************************
+****************************************
+
+****************
+PRE CUTOVER
+
+Policies and exports can be created once the CHG starts
+****************
+
+1: Create QOS policy [all volumes; Use "INF" for dedicated, use "10000iops" for shared AFF, use "6000iops" for shared non-AFF]
+============================================
+ssh sy-cis-clsp-x03 qos policy-group show -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 qos policy-group create -policy-group aiid200112_u_i_dbi_chg1151133_01_snap07 -vserver cisclnt-z0025 -max-throughput 10000iops
+ssh sy-cis-clsp-x03 qos policy-group create -policy-group aiid200112_u_i_dbi_chg1151133_02_snap07 -vserver cisclnt-z0025 -max-throughput 10000iops
+ssh sy-cis-clsp-x03 qos policy-group create -policy-group aiid200112_u_i_dbi_chg1151133_03_nosnap -vserver cisclnt-z0025 -max-throughput 10000iops
+ssh sy-cis-clsp-x03 qos policy-group show -vserver cisclnt-z0025
+
+2: Create volume efficiency policy [AFF NODES ONLY - check node show]
+============================================
+ssh sy-cis-clsp-x03 volume efficiency policy show -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 volume efficiency policy create -vserver cisclnt-z0025 -policy AlwaysOn -type scheduled -schedule hourly -qos-policy background
+ssh sy-cis-clsp-x03 volume efficiency policy show -vserver cisclnt-z0025
+
+3: Create portset and igroup (igroup create binds igroup to portset)
+===================================================
+ssh sy-cis-clsp-x03 portset show -vserver cisclnt-z0025 -instance
+
+# If portset is not created:
+# ssh sy-cis-clsp-x03 portset create -vserver cisclnt-z0025 -portset cisclnt-z0025-port-01 -port-name cisclnt-z0025-lif01,cisclnt-z0025-lif02 -protocol iscsi
+# ssh sy-cis-clsp-x03 portset show -vserver cisclnt-z0025 -instance
+
+ssh sy-cis-clsp-x03 igroup show -vserver cisclnt-z0025 -instance
+
+ssh sy-cis-clsp-x03 igroup create -vserver cisclnt-z0025 -igroup ig-cisclnt-z0025-01 -protocol iscsi -ostype windows -initiator iqn.1991-05.com.microsoft:c066wgjaucvs1.intqa.thomsonreuters.com -portset cisclnt-z0025-port-01  
+ssh sy-cis-clsp-x03 igroup show -vserver cisclnt-z0025 -instance
+ssh sy-cis-clsp-x03 portset show -vserver cisclnt-z0025 -instance
+
+****************
+CUTOVER
+
+Cutover can occur once servers are shutdown or storage is unmounted
+****************
+
+4: Check connections, ensure host is not logged in
+============================================
+ssh sy-cis-clsp-x01 igroup show -vserver cisclnt-z0032 -instance
+
+5: Cutover snapmirror on destination
+============================================
+ssh sy-cis-clsp-x03 snapmirror show -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 snapmirror update -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 snapmirror update -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 snapmirror update -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_03_nosnap
+ssh sy-cis-clsp-x03 snapmirror show -vserver cisclnt-z0025 -fields state,status,total-progress,lag-time
+
+ssh sy-cis-clsp-x03 snapmirror quiesce -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 snapmirror quiesce -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 snapmirror quiesce -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_03_nosnap
+ssh sy-cis-clsp-x03 snapmirror break -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 snapmirror break -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 snapmirror break -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_03_nosnap
+ssh sy-cis-clsp-x03 snapmirror show -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 snapmirror delete -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 snapmirror delete -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 snapmirror delete -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_03_nosnap
+ssh sy-cis-clsp-x03 snapmirror show -vserver cisclnt-z0025
+
+6: Release snapmirror on source
+============================================
+ssh sy-cis-clsp-x01 snapmirror list-destinations -source-vserver cisclnt-z0032
+
+ssh sy-cis-clsp-x01 snapmirror release -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x01 snapmirror release -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x01 snapmirror release -destination-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_03_nosnap
+ssh sy-cis-clsp-x01 snapmirror list-destinations -source-vserver cisclnt-z0032
+
+7: Offline and rename source data volumes 
+==========================================
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032
+
+ssh sy-cis-clsp-x01 volume offline -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_usr_snap
+ssh sy-cis-clsp-x01 volume offline -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_info_snap
+ssh sy-cis-clsp-x01 volume offline -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_tsys_nosnap
+ssh sy-cis-clsp-x01 volume rename -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_usr_snap -newname cb0000_wi_legalcvmailppe1_usr_snap_EXP_2022OCT09_CHG1151123_Sydtechrefresh
+ssh sy-cis-clsp-x01 volume rename -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_info_snap -newname cb0000_wi_legalcvmailppe1_info_snap_EXP_2022OCT09_CHG1151123_Sydtechrefresh
+ssh sy-cis-clsp-x01 volume rename -vserver cisclnt-z0032 -volume cb0000_wi_legalcvmailppe1_tsys_nosnap -newname cb0000_wi_legalcvmailppe1_tsys_nosnap_EXP_2022OCT09_CHG1151123_Sydtechrefresh
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032
+
+8: If all data volumes are offline, also offline root and stop vserver for decom
+============================================
+ADD SOURCE VSERVER TO MAINTENANCE MODE
+
+cisclnt-z0032
+
+http://maintenance.int.thomsonreuters.com/
+
+Click Maintenance which should bring you to the "Add to Maintenance" tab.
+Search for the vserver name in the "Server Search" bar in the upper right.
+Select the vserver and click the "Swap -->" button to move the vserver to the "Selected" list.
+In the right-hand panel set the following:
+When: Now
+How long: Quick Set 3 months
+Reason: To Be Decommissioned
+Other Reason: EXP_2022OCT09_CHG1151123_Sydtechrefresh
+
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032
+
+ssh sy-cis-clsp-x01 volume offline -vserver cisclnt-z0032 -volume cisclnt_z0032_root
+ssh sy-cis-clsp-x01 volume rename -vserver cisclnt-z0032 -volume cisclnt_z0032_root -newname cisclnt_z0032_root_EXP_2022OCT09_CHG1151123_Sydtechrefresh
+ssh sy-cis-clsp-x01 volume show -vserver cisclnt-z0032
+
+ssh sy-cis-clsp-x01 vserver show -vserver cisclnt-z0032
+
+ssh sy-cis-clsp-x01 vserver stop -vserver cisclnt-z0032
+ssh sy-cis-clsp-x01 vserver show -vserver cisclnt-z0032
+
+9: Delete all snapshots in destination [all migrated volumes]
+============================================
+ssh sy-cis-clsp-x03 snapshot show -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 snapshot delete -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -snapshot '*'
+ssh sy-cis-clsp-x03 snapshot delete -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -snapshot '*'
+ssh sy-cis-clsp-x03 snapshot delete -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -snapshot '*'
+ssh sy-cis-clsp-x03 snapshot show -vserver cisclnt-z0025
+
+10: Turn off volume autosize [all volumes]
+============================================
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap
+
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -mode off
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -mode off
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -mode off
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap
+
+11: Remove snapshot reserve and shrink volumes [any vols which had space added]
+Right-size volumes based on luns. All iscsi volumes need an additional 5% for buffer.
+============================================
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields percent-snapshot-space,filesystem-size,percent-used
+ssh sy-cis-clsp-x03 df -h -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -percent-snapshot-space 50
+ssh sy-cis-clsp-x03 volume size -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -new-size 427.2g
+
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -percent-snapshot-space 50
+ssh sy-cis-clsp-x03 volume size -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -new-size 27g
+
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -percent-snapshot-space 0
+ssh sy-cis-clsp-x03 volume size -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -new-size 53g
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields percent-snapshot-space,filesystem-size,percent-used
+ssh sy-cis-clsp-x03 df -h -vserver cisclnt-z0025
+
+12: Reset and enable volume autogrow [all volumes]
+============================================
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -reset true
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -reset true
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -reset true
+
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields autosize-mode,space-mgmt-try-first,autosize-grow-threshold-percent
+
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -autosize-mode grow -space-mgmt-try-first volume_grow -autosize-grow-threshold-percent 95
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -autosize-mode grow -space-mgmt-try-first volume_grow -autosize-grow-threshold-percent 95
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -autosize-mode grow -space-mgmt-try-first volume_grow -autosize-grow-threshold-percent 95
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields autosize-mode,space-mgmt-try-first,autosize-grow-threshold-percent
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clsp-x03 volume autosize -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap
+
+13: Map the Luns
+Note: it is critically important to apply the correct lun-ids as the source system
+===============
+ssh sy-cis-clsp-x03 lun mapping show -vserver cisclnt-z0025
+
+ssh sy-cis-clsp-x03 lun map -vserver cisclnt-z0025 -igroup ig-cisclnt-z0025-01 -lun-id 0 -path /vol/aiid200112_u_i_dbi_chg1151133_01_snap07/luns/userdb
+ssh sy-cis-clsp-x03 lun map -vserver cisclnt-z0025 -igroup ig-cisclnt-z0025-01 -lun-id 1 -path /vol/aiid200112_u_i_dbi_chg1151133_01_snap07/luns/userlog
+ssh sy-cis-clsp-x03 lun map -vserver cisclnt-z0025 -igroup ig-cisclnt-z0025-01 -lun-id 2 -path /vol/aiid200112_u_i_dbi_chg1151133_02_snap07/luns/snapinfo
+ssh sy-cis-clsp-x03 lun map -vserver cisclnt-z0025 -igroup ig-cisclnt-z0025-01 -lun-id 3 -path /vol/aiid200112_u_i_dbi_chg1151133_03_nosnap/luns/tmpsys
+ssh sy-cis-clsp-x03 lun mapping show -vserver cisclnt-z0025
+
+14: Apply QOS policy [all volumes]
+Note: snapshot policy should be none for iscsi
+============================================
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields qos-policy-group,snapshot-policy
+
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -qos-policy-group aiid200112_u_i_dbi_chg1151133_01_snap07 -snapshot-policy none
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -qos-policy-group aiid200112_u_i_dbi_chg1151133_02_snap07 -snapshot-policy none
+ssh sy-cis-clsp-x03 volume modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -qos-policy-group aiid200112_u_i_dbi_chg1151133_03_nosnap -snapshot-policy none
+ssh sy-cis-clsp-x03 volume show -vserver cisclnt-z0025 -fields qos-policy-group,snapshot-policy
+
+15: Confirm snap autodelete settings [all snap vols]
+============================================
+ssh sy-cis-clsp-x03 volume snapshot autodelete show -vserver cisclnt-z0025 -fields enabled,trigger | grep -v _nosnap
+
+ssh sy-cis-clsp-x03 volume snapshot autodelete modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -enabled true -trigger snap_reserve
+ssh sy-cis-clsp-x03 volume snapshot autodelete modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -enabled true -trigger snap_reserve
+ssh sy-cis-clsp-x03 volume snapshot autodelete show -vserver cisclnt-z0025 -fields enabled,trigger | grep -v _nosnap
+
+16: Enable volume efficiencies and apply efficiency policy [AFF NODES ONLY - check node show]
+============================================
+ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields state,policy,compression,inline-compression,inline-dedupe,data-compaction
+
+ssh sy-cis-clsp-x03 volume efficiency modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -inline-compression true -inline-dedupe true -compression true -policy AlwaysOn
+ssh sy-cis-clsp-x03 volume efficiency modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -inline-compression true -inline-dedupe true -compression true -policy AlwaysOn
+ssh sy-cis-clsp-x03 volume efficiency modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -inline-compression true -inline-dedupe true -compression true -policy AlwaysOn
+ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields state,policy,compression,inline-compression,inline-dedupe,data-compaction
+
+# If efficiency is not enabled:
+# ssh sy-cis-clsp-x03 volume efficiency on -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07
+# ssh sy-cis-clsp-x03 volume efficiency on -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07
+# ssh sy-cis-clsp-x03 volume efficiency on -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap
+# ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields state,policy,compression,inline-compression,inline-dedupe,data-compaction
+
+# If data-compaction is not true:
+# ssh sy-cis-clsp-x03 volume efficiency modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -data-compaction true
+# ssh sy-cis-clsp-x03 volume efficiency modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -data-compaction true
+# ssh sy-cis-clsp-x03 volume efficiency modify -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -data-compaction true
+# ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields state,policy,compression,inline-compression,inline-dedupe,data-compaction
+
+17: Run one-time manual efficiency scan [AFF NODES ONLY - check node show]
+Note: Scan may take awhile to run. Scheduled efficiences will not run until one-time manual scan occurs.
+============================================
+ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields op-status,progress,last-op-state,last-op-end
+
+ssh sy-cis-clsp-x03 'set -priv advanced; volume efficiency start -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_01_snap07 -dedupe true -compression true -compaction true -qos-policy background -scan-old-data true -scan-all true -snapshot-blocks true'
+ssh sy-cis-clsp-x03 'set -priv advanced; volume efficiency start -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_02_snap07 -dedupe true -compression true -compaction true -qos-policy background -scan-old-data true -scan-all true -snapshot-blocks true'
+ssh sy-cis-clsp-x03 'set -priv advanced; volume efficiency start -vserver cisclnt-z0025 -volume aiid200112_u_i_dbi_chg1151133_03_nosnap -dedupe true -compression true -compaction true -qos-policy background -scan-old-data true -scan-all true -snapshot-blocks true'
+ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields op-status,progress,last-op-state,last-op-end
+
+**************************************
+Backups
+**************************************
+
+18: Offline source backup volumes [all migrated volumes]
+============================================
+ssh sy-cis-clbk-x02 volume show -vserver cis-ss-clbk-x02 | egrep -i "sv_07_cb0000_wi_legalcvmailppe1_usr_snap|sv_07_cb0000_wi_legalcvmailppe1_info_snap"
+
+ssh sy-cis-clbk-x02 volume offline -vserver cis-ss-clbk-x02 -volume sv_07_cb0000_wi_legalcvmailppe1_usr_snap
+ssh sy-cis-clbk-x02 volume offline -vserver cis-ss-clbk-x02 -volume sv_07_cb0000_wi_legalcvmailppe1_info_snap
+ssh sy-cis-clbk-x02 volume rename -vserver cis-ss-clbk-x02 -volume sv_07_cb0000_wi_legalcvmailppe1_usr_snap -newname sv_07_cb0000_wi_legalcvmailppe1_usr_snap_EXP_2022OCT02_CHG1151123_Sydtechrefresh
+ssh sy-cis-clbk-x02 volume rename -vserver cis-ss-clbk-x02 -volume sv_07_cb0000_wi_legalcvmailppe1_info_snap -newname sv_07_cb0000_wi_legalcvmailppe1_info_snap_EXP_2022OCT02_CHG1151123_Sydtechrefresh
+ssh sy-cis-clbk-x02 volume show -vserver cis-ss-clbk-x02 | egrep -i "sv_07_cb0000_wi_legalcvmailppe1_usr_snap|sv_07_cb0000_wi_legalcvmailppe1_info_snap"
+
+19: Create vserver peer relationship from backup vserver [once per vserver-vserver pair]
+============================================
+ssh sy-cis-clbk-x01 vserver peer create -vserver cis-ss-clbk-x09 -peer-vserver cisclnt-z0025 -applications snapmirror -peer-cluster sy-cis-clsp-x03
+
+20: Accept vserver peer relationship on primary vserver [once per vserver-vserver pair]
+============================================
+ssh sy-cis-clsp-x03 vserver peer accept -vserver cisclnt-z0025 -peer-vserver cis-ss-clbk-x09
+
+21: Create backup volumes as type DP [all snap vols]
+============================================
+ssh sy-cis-clbk-x01 volume create -vserver cis-ss-clbk-x09 -volume sv_aiid200112_u_i_dbi_chg1151133_01_snap07 -aggregate aggr1_data_b01 -size 1281.6g -security-style unix -space-guarantee none -percent-snapshot-space 0 -language en_US -type DP
+ssh sy-cis-clbk-x01 volume create -vserver cis-ss-clbk-x09 -volume sv_aiid200112_u_i_dbi_chg1151133_02_snap07 -aggregate aggr1_data_b01 -size 81g -security-style unix -space-guarantee none -percent-snapshot-space 0 -language en_US -type DP
+
+22: Create snapmirror relationship with defined schedule and policy on backup vserver [all snap vols]
+============================================
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07
+
+ssh sy-cis-clbk-x01 snapmirror create -source-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_01_snap07 -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07 -type XDP -schedule xdp_00 -policy XDP_iscsi_7
+ssh sy-cis-clbk-x01 snapmirror create -source-path cisclnt-z0025:aiid200112_u_i_dbi_chg1151133_02_snap07 -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07 -type XDP -schedule xdp_00 -policy XDP_iscsi_7
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07 -fields schedule,policy
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07 -fields schedule,policy
+
+23: Initialize snapmirror relationship on backup vserver [all snap vols]
+============================================
+ssh sy-cis-clbk-x01 snapmirror show -vserver cis-ss-clbk-x09 | egrep -i "sv_aiid200112_u_i_dbi_chg1151133_01_snap07|sv_aiid200112_u_i_dbi_chg1151133_02_snap07"
+
+ssh sy-cis-clbk-x01 snapmirror initialize -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clbk-x01 snapmirror initialize -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07
+
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07 -fields state,status,total-progress,lag-time
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07 -fields state,status,total-progress,lag-time
+
+**************************************
+**************************************
+At this point you can let Windows do post-checks
+**************************************
+**************************************
+
+Confirm Windows postchecks
+
+Confirm server logged into igroup
+============================================
+ssh sy-cis-clsp-x03 igroup show -vserver cisclnt-z0025 -instance
+
+Confirm both lif01 and lif02 are connected, confirming MPIO is configured correctly on the server
+============================================
+ssh sy-cis-clsp-x03 vserver iscsi connection show -vserver cisclnt-z0025
+
+Note: For SnapCenter, need to assign resource access after Windows creates managed hosts.
+
+**************************************
+**************************************
+
+Note: For SnapCenter, Remind DBA - Use "s.snapc" user, not "svcsnap" user
+Note: For SnapCenter, need to assign resource access again after DBA creates resource groups.
+Note: New archlog location will be empty, DBA needs to create base folder structure.
+
+Get DBA confirmation they are done with Primary Archlogs before offlining source Primary Archlogs
+
+Check connections, ensure no further host activity seen
+============================================
+ssh sy-cis-clsp-x02 'set -priv advanced; statistics show-periodic -vserver cismssql-z0003 -object volume -instance cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap -counter "write_ops|read_ops|read_latency|write_latency" -interval 2 -iterations 15'
+
+Unmount, offline, and rename the source Primary Archlog volumes
+==========================================
+ssh sy-cis-clsp-x02 volume show -vserver cismssql-z0003 -fields junction-path | egrep -i "cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap"
+
+ssh sy-cis-clsp-x02 volume unmount -vserver cismssql-z0003 -volume cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap
+ssh sy-cis-clsp-x02 volume offline -vserver cismssql-z0003 -volume cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap
+ssh sy-cis-clsp-x02 volume rename -vserver cismssql-z0003 -volume cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap -newname cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap_EXP_2022OCT02_CHG1151123_Sydtechrefresh
+ssh sy-cis-clsp-x02 volume show -vserver cismssql-z0003 -fields junction-path | egrep -i "cb0000_wi_legalcvmailppe1_07_sqlarch01_nosnap"
+
+**************************************
+**************************************
+
+Monitor efficiency scan until complete
+============================================
+ssh sy-cis-clsp-x03 volume efficiency show -vserver cisclnt-z0025 -fields op-status,progress,last-op-state,last-op-end
+
+Monitor backup snapmirror baseline until complete
+============================================
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_01_snap07 -fields state,status,total-progress,lag-time
+ssh sy-cis-clbk-x01 snapmirror show -destination-path cis-ss-clbk-x09:sv_aiid200112_u_i_dbi_chg1151133_02_snap07 -fields state,status,total-progress,lag-time
