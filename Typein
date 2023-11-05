@@ -1,0 +1,4 @@
+and two node pairs in System Bay 2. There is a maximum of
+four DMEs in each bay.
+Each node pair in a PowerMax 2500 system on single-phase power is powered by a separate line cord. Each line cord energizes
+the circuit breakers and corresponding PDU outlets. Jumpers are required in some configurations in System Bay 2.
